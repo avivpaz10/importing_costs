@@ -6,7 +6,7 @@ import re
 from werkzeug.utils import secure_filename
 
 app = Flask(__name__)
-app.config['SECRET_KEY'] = os.urandom(24)
+app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24))
 app.config['UPLOAD_FOLDER'] = 'uploads'
 
 # Ensure upload folder exists
@@ -542,6 +542,14 @@ def manifest():
 def service_worker():
     return send_from_directory('static', 'sw.js')
 
+@app.route('/static/icon-192.png')
+def icon_192():
+    return send_from_directory('static', 'icon-192.png')
+
+@app.route('/static/icon-512.png')
+def icon_512():
+    return send_from_directory('static', 'icon-512.png')
+
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
@@ -653,4 +661,5 @@ def calculate():
         return jsonify({'error': f'An error occurred: {str(e)}'}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True) 
+    port = int(os.environ.get('PORT', 5000))
+    app.run(host='0.0.0.0', port=port, debug=False) 
