@@ -1,393 +1,604 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Container Shipping Calculator</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    <title>מחשבון עלויות ייבוא</title>
     
     <!-- PWA Meta Tags -->
     <meta name="theme-color" content="#007bff">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
-    <meta name="apple-mobile-web-app-title" content="Import Calculator">
+    <meta name="apple-mobile-web-app-title" content="מחשבון ייבוא">
     
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json">
     
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
+    
     <style>
-        .container-settings {
-            background-color: #f8f9fa;
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
+        body {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .product-row {
-            background-color: white;
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 10px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        
+        .main-container {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
+            backdrop-filter: blur(10px);
+            margin: 20px auto;
+            max-width: 1200px;
         }
-        .results-table {
-            margin-top: 20px;
-        }
-        .drag-area {
-            border: 2px dashed #0d6efd;
-            border-radius: 8px;
-            padding: 20px;
+        
+        .header {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            padding: 30px;
+            border-radius: 20px 20px 0 0;
             text-align: center;
-            cursor: pointer;
-            margin-bottom: 20px;
         }
-        .drag-area.active {
-            border-color: #198754;
+        
+        .content {
+            padding: 30px;
+        }
+        
+        .form-section {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            margin-bottom: 25px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            border: 1px solid #e9ecef;
+        }
+        
+        .form-section h3 {
+            color: #495057;
+            margin-bottom: 20px;
+            font-weight: 600;
+            border-bottom: 2px solid #007bff;
+            padding-bottom: 10px;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(0, 123, 255, 0.3);
+        }
+        
+        .btn-success {
+            background: linear-gradient(135deg, #28a745, #1e7e34);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-success:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(40, 167, 69, 0.3);
+        }
+        
+        .form-control, .form-select {
+            border-radius: 10px;
+            border: 2px solid #e9ecef;
+            padding: 12px 15px;
+            transition: all 0.3s ease;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: #007bff;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        
+        .product-row {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-left: 4px solid #007bff;
+        }
+        
+        .results-table {
+            background: white;
+            border-radius: 15px;
+            overflow: hidden;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+        }
+        
+        .table {
+            margin-bottom: 0;
+        }
+        
+        .table th {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+            padding: 15px;
+            font-weight: 600;
+        }
+        
+        .table td {
+            padding: 12px 15px;
+            vertical-align: middle;
+        }
+        
+        .table tbody tr:nth-child(even) {
             background-color: #f8f9fa;
+        }
+        
+        .total-row {
+            background: linear-gradient(135deg, #28a745, #1e7e34) !important;
+            color: white;
+            font-weight: bold;
+        }
+        
+        .file-upload-area {
+            border: 3px dashed #007bff;
+            border-radius: 15px;
+            padding: 40px;
+            text-align: center;
+            background: #f8f9fa;
+            transition: all 0.3s ease;
+            cursor: pointer;
+        }
+        
+        .file-upload-area:hover {
+            background: #e9ecef;
+            border-color: #0056b3;
+        }
+        
+        .file-upload-area.dragover {
+            background: #d1ecf1;
+            border-color: #17a2b8;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        
+        .spinner-border {
+            width: 3rem;
+            height: 3rem;
+        }
+        
+        .alert {
+            border-radius: 10px;
+            border: none;
+        }
+        
+        .currency-badge {
+            background: linear-gradient(135deg, #ffc107, #e0a800);
+            color: #212529;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8em;
+            font-weight: 600;
+        }
+        
+        .install-prompt {
+            background: linear-gradient(135deg, #17a2b8, #138496);
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .main-container {
+                margin: 10px;
+                border-radius: 15px;
+            }
+            
+            .content {
+                padding: 20px;
+            }
+            
+            .header {
+                padding: 20px;
+                border-radius: 15px 15px 0 0;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container py-4">
-        <h1 class="mb-4">Container Shipping Calculator</h1>
-        
-        <!-- Install Prompt for PWA -->
-        <div class="install-prompt" id="installPrompt">
-            <div class="d-flex justify-content-between align-items-center">
-                <div>
-                    <i class="bi bi-download"></i>
-                    <strong>Install App</strong> - Add to home screen for better experience
+    <div class="container-fluid">
+        <div class="main-container">
+            <div class="header">
+                <h1><i class="fas fa-ship"></i> מחשבון עלויות ייבוא</h1>
+                <p class="mb-0">חשב עלויות משלוח עבור עסק הייבוא שלך</p>
+            </div>
+            
+            <!-- Install Prompt for PWA -->
+            <div class="install-prompt" id="installPrompt">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="fas fa-download"></i>
+                        <strong>התקן אפליקציה</strong> - הוסף למסך הבית לחוויית משתמש טובה יותר
+                    </div>
+                    <button class="btn btn-light btn-sm" onclick="installApp()">התקן</button>
                 </div>
-                <button class="btn btn-light btn-sm" onclick="installApp()">Install</button>
             </div>
-        </div>
-        
-        <!-- Excel Upload Section -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">Import Data from Excel</h5>
-            </div>
-            <div class="card-body">
-                <div class="drag-area" id="dropZone">
-                    <i class="bi bi-file-earmark-excel fs-1"></i>
-                    <p class="mt-2">Drag & Drop your Excel file here or click to browse</p>
-                    <input type="file" id="fileInput" accept=".xls,.xlsx" class="d-none">
+            
+            <div class="content">
+                <!-- Excel Upload Section -->
+                <div class="form-section">
+                    <h3><i class="fas fa-file-excel"></i> העלאת קובץ אקסל</h3>
+                    <div class="file-upload-area" id="fileUploadArea">
+                        <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
+                        <h5>גרור ושחרר קובץ אקסל כאן</h5>
+                        <p class="text-muted">או לחץ כדי לדפדף</p>
+                        <input type="file" id="excelFile" accept=".xls,.xlsx" style="display: none;">
+                    </div>
+                    <div class="loading" id="loading">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">טוען...</span>
+                        </div>
+                        <p class="mt-2">מעבד קובץ אקסל...</p>
+                    </div>
                 </div>
-                <div id="uploadStatus" class="alert d-none"></div>
-            </div>
-        </div>
 
-        <!-- Container Settings -->
-        <div class="container-settings">
-            <h4 class="mb-3">Container Settings</h4>
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">Container Cost (USD)</label>
-                    <input type="number" class="form-control" id="containerCost" step="0.01" required>
+                <!-- Container Settings Section -->
+                <div class="form-section">
+                    <h3><i class="fas fa-cog"></i> הגדרות מיכל</h3>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label for="containerCost" class="form-label">עלות מיכל (דולר)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">$</span>
+                                <input type="number" class="form-control" id="containerCost" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="containerVolume" class="form-label">נפח מיכל (מטר מעוקב)</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="containerVolume" step="0.01" required>
+                                <span class="input-group-text">מ"ק</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="importTaxRate" class="form-label">שיעור מכס ייבוא</label>
+                            <div class="input-group">
+                                <input type="number" class="form-control" id="importTaxRate" step="0.01" required>
+                                <span class="input-group-text">%</span>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="usdToIlsRate" class="form-label">שער דולר לשקל</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₪</span>
+                                <input type="number" class="form-control" id="usdToIlsRate" step="0.01" required>
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="localTransportation" class="form-label">הובלה מקומית (שקל)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₪</span>
+                                <input type="number" class="form-control" id="localTransportation" step="0.01" value="0">
+                            </div>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label for="unloadingCost" class="form-label">עלות פריקה (שקל)</label>
+                            <div class="input-group">
+                                <span class="input-group-text">₪</span>
+                                <input type="number" class="form-control" id="unloadingCost" step="0.01" value="0">
+                            </div>
+                        </div>
+                    </div>
                 </div>
-                <div class="col-md-3">
-                    <label class="form-label">Container Volume (m³)</label>
-                    <input type="number" class="form-control" id="containerVolume" step="0.01" required>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">Import Tax Rate (%)</label>
-                    <input type="number" class="form-control" id="importTaxRate" step="0.01" required>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">USD to ILS Rate</label>
-                    <input type="number" class="form-control" id="usdToIlsRate" step="0.01" required>
-                </div>
-            </div>
-        </div>
 
-        <!-- Additional Costs -->
-        <div class="container-settings">
-            <h4 class="mb-3">Additional Costs</h4>
-            <div class="row g-3">
-                <div class="col-md-6">
-                    <label class="form-label">Local Transportation Cost (ILS)</label>
-                    <input type="number" class="form-control" id="localTransportation" step="0.01" value="0">
+                <!-- Products Section -->
+                <div class="form-section">
+                    <h3><i class="fas fa-boxes"></i> מוצרים</h3>
+                    <div id="productsContainer">
+                        <!-- Products will be added here -->
+                    </div>
+                    <button type="button" class="btn btn-outline-primary" onclick="addProduct()">
+                        <i class="fas fa-plus"></i> הוסף מוצר
+                    </button>
                 </div>
-                <div class="col-md-6">
-                    <label class="form-label">Container Unloading Cost (ILS)</label>
-                    <input type="number" class="form-control" id="unloadingCost" step="0.01" value="0">
+
+                <!-- Calculate Button -->
+                <div class="text-center mb-4">
+                    <button type="button" class="btn btn-success btn-lg" onclick="calculateCosts()">
+                        <i class="fas fa-calculator"></i> חשב עלויות משלוח
+                    </button>
                 </div>
-            </div>
-        </div>
 
-        <!-- Products Section -->
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">Products</h5>
-                <button class="btn btn-primary" id="addProduct">
-                    <i class="bi bi-plus-lg"></i> Add Product
-                </button>
-            </div>
-            <div class="card-body">
-                <div id="productsList"></div>
-            </div>
-        </div>
-
-        <!-- Calculate Button -->
-        <div class="text-center mb-4">
-            <button class="btn btn-success btn-lg" id="calculateBtn">
-                Calculate Shipping Costs
-            </button>
-        </div>
-
-        <!-- Results Section -->
-        <div class="results-table d-none" id="resultsSection">
-            <h4 class="mb-3">Calculation Results</h4>
-            <div class="table-responsive">
-                <table class="table table-striped">
-                    <thead>
-                        <tr>
-                            <th>Product Name</th>
-                            <th>Quantity</th>
-                            <th>Shipping Cost per Unit (USD)</th>
-                            <th>Total Volume (m³)</th>
-                            <th>Volume per Unit (m³)</th>
-                            <th>Shipping Cost (USD)</th>
-                            <th>Import Tax (USD)</th>
-                            <th>Total Cost (USD)</th>
-                            <th>Total Cost (ILS)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="resultsBody"></tbody>
-                </table>
+                <!-- Results Section -->
+                <div class="form-section" id="resultsSection" style="display: none;">
+                    <h3><i class="fas fa-chart-bar"></i> תוצאות חישוב</h3>
+                    <div class="table-responsive">
+                        <table class="table table-striped results-table">
+                            <thead>
+                                <tr>
+                                    <th>מוצר</th>
+                                    <th>כמות</th>
+                                    <th>נפח כולל (מ"ק)</th>
+                                    <th>נפח ליחידה (מ"ק)</th>
+                                    <th>עלות מקורית ליחידה (דולר)</th>
+                                    <th>עלות משלוח ליחידה (דולר)</th>
+                                    <th>עלות סופית ליחידה (דולר)</th>
+                                    <th>עלות משלוח (דולר)</th>
+                                    <th>מכס ייבוא (דולר)</th>
+                                    <th>עלות כוללת (דולר)</th>
+                                    <th>עלות כוללת (שקל)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="resultsTableBody">
+                                <!-- Results will be populated here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- Product Template -->
-    <template id="productTemplate">
-        <div class="product-row">
-            <div class="row g-3">
-                <div class="col-md-3">
-                    <label class="form-label">Product Name</label>
-                    <input type="text" class="form-control product-name" required>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Quantity</label>
-                    <input type="number" class="form-control product-quantity" min="1" required>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Total Volume (m³)</label>
-                    <input type="number" class="form-control product-volume" step="0.01" required>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">Cost per Unit (USD)</label>
-                    <input type="number" class="form-control product-cost" step="0.01" required>
-                </div>
-                <div class="col-md-2">
-                    <label class="form-label">&nbsp;</label>
-                    <button class="btn btn-danger d-block w-100 remove-product">
-                        <i class="bi bi-trash"></i> Remove
-                    </button>
-                </div>
-            </div>
-        </div>
-    </template>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    
     <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            const dropZone = document.getElementById('dropZone');
-            const fileInput = document.getElementById('fileInput');
-            const uploadStatus = document.getElementById('uploadStatus');
-            const addProductBtn = document.getElementById('addProduct');
-            const productsList = document.getElementById('productsList');
-            const calculateBtn = document.getElementById('calculateBtn');
-            const resultsSection = document.getElementById('resultsSection');
-            const resultsBody = document.getElementById('resultsBody');
-            const productTemplate = document.getElementById('productTemplate');
-            let deferredPrompt;
+        let productCount = 0;
+        let deferredPrompt;
 
-            // PWA Installation
-            window.addEventListener('beforeinstallprompt', (e) => {
-                e.preventDefault();
-                deferredPrompt = e;
-                document.getElementById('installPrompt').style.display = 'block';
-            });
+        // PWA Installation
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installPrompt').style.display = 'block';
+        });
 
-            function installApp() {
-                if (deferredPrompt) {
-                    deferredPrompt.prompt();
-                    deferredPrompt.userChoice.then((choiceResult) => {
-                        if (choiceResult.outcome === 'accepted') {
-                            console.log('User accepted the install prompt');
-                        }
-                        deferredPrompt = null;
-                        document.getElementById('installPrompt').style.display = 'none';
-                    });
-                }
-            }
-
-            // File Upload Handling
-            dropZone.addEventListener('click', () => fileInput.click());
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropZone.classList.add('active');
-            });
-            dropZone.addEventListener('dragleave', () => {
-                dropZone.classList.remove('active');
-            });
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('active');
-                const files = e.dataTransfer.files;
-                if (files.length) handleFile(files[0]);
-            });
-            fileInput.addEventListener('change', (e) => {
-                if (e.target.files.length) handleFile(e.target.files[0]);
-            });
-
-            function handleFile(file) {
-                if (!file.name.match(/\.(xls|xlsx)$/)) {
-                    showUploadStatus('Please upload an Excel file', 'danger');
-                    return;
-                }
-
-                const formData = new FormData();
-                formData.append('file', file);
-
-                showUploadStatus('Processing file...', 'info');
-
-                fetch('/upload', {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        showUploadStatus(data.error, 'danger');
-                    } else {
-                        showUploadStatus(`File processed successfully! Found ${data.total_products} products.`, 'success');
-                        
-                        // Clear existing products
-                        productsList.innerHTML = '';
-                        
-                        // Add products from Excel
-                        data.products.forEach(product => {
-                            const clone = productTemplate.content.cloneNode(true);
-                            const row = clone.querySelector('.product-row');
-                            
-                            row.querySelector('.product-name').value = product.name;
-                            row.querySelector('.product-quantity').value = product.quantity;
-                            row.querySelector('.product-volume').value = product.total_volume;
-                            row.querySelector('.product-cost').value = product.cost_per_unit_usd;
-                            
-                            productsList.appendChild(clone);
-                        });
-
-                        // Show column mapping information
-                        const columnInfo = Object.entries(data.columns_found)
-                            .map(([key, value]) => `${key}: ${value}`)
-                            .join(', ');
-                        
-                        if (columnInfo) {
-                            const infoAlert = document.createElement('div');
-                            infoAlert.className = 'alert alert-info mt-3';
-                            infoAlert.textContent = `Detected columns: ${columnInfo}`;
-                            uploadStatus.parentNode.insertBefore(infoAlert, uploadStatus.nextSibling);
-                        }
+        function installApp() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        console.log('User accepted the install prompt');
                     }
-                })
-                .catch(error => {
-                    showUploadStatus('Error processing file: ' + error, 'danger');
+                    deferredPrompt = null;
+                    document.getElementById('installPrompt').style.display = 'none';
                 });
             }
+        }
 
-            function showUploadStatus(message, type) {
-                uploadStatus.textContent = message;
-                uploadStatus.className = `alert alert-${type}`;
-                uploadStatus.classList.remove('d-none');
-            }
+        // File Upload Handling
+        const fileUploadArea = document.getElementById('fileUploadArea');
+        const fileInput = document.getElementById('excelFile');
 
-            // Product Management
-            addProductBtn.addEventListener('click', () => {
-                if (productsList.children.length >= 50) {
-                    alert('Maximum 50 products allowed');
-                    return;
-                }
-                const clone = productTemplate.content.cloneNode(true);
-                productsList.appendChild(clone);
-            });
-
-            productsList.addEventListener('click', (e) => {
-                if (e.target.classList.contains('remove-product')) {
-                    e.target.closest('.product-row').remove();
-                }
-            });
-
-            // Calculation
-            calculateBtn.addEventListener('click', () => {
-                const containerCost = parseFloat(document.getElementById('containerCost').value);
-                const containerVolume = parseFloat(document.getElementById('containerVolume').value);
-                const importTaxRate = parseFloat(document.getElementById('importTaxRate').value) / 100;
-                const usdToIlsRate = parseFloat(document.getElementById('usdToIlsRate').value);
-                const localTransportation = parseFloat(document.getElementById('localTransportation').value) || 0;
-                const unloadingCost = parseFloat(document.getElementById('unloadingCost').value) || 0;
-
-                const products = Array.from(productsList.children).map(row => ({
-                    name: row.querySelector('.product-name').value,
-                    quantity: parseInt(row.querySelector('.product-quantity').value),
-                    total_volume: parseFloat(row.querySelector('.product-volume').value),
-                    cost_per_unit_usd: parseFloat(row.querySelector('.product-cost').value)
-                }));
-
-                const data = {
-                    container_cost_usd: containerCost,
-                    container_volume: containerVolume,
-                    import_tax_rate: importTaxRate,
-                    usd_to_ils_rate: usdToIlsRate,
-                    local_transportation_ils: localTransportation,
-                    unloading_cost_ils: unloadingCost,
-                    products: products
-                };
-
-                fetch('/calculate', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        alert(data.error);
-                    } else {
-                        displayResults(data.results);
-                    }
-                })
-                .catch(error => {
-                    alert('Error calculating costs: ' + error);
-                });
-            });
-
-            function displayResults(results) {
-                resultsBody.innerHTML = results.map(result => {
-                    const rowClass = result.is_total ? 'table-primary fw-bold' : 
-                                   result.is_additional_cost ? 'table-info' : '';
-                    
-                    return `
-                        <tr class="${rowClass}">
-                            <td>${result.name}</td>
-                            <td>${result.quantity}</td>
-                            <td>$${result.shipping_cost_per_unit_usd ? result.shipping_cost_per_unit_usd.toFixed(2) : '0.00'}</td>
-                            <td>${result.total_volume.toFixed(2)}</td>
-                            <td>${result.volume_per_unit.toFixed(2)}</td>
-                            <td>$${result.shipping_cost_usd.toFixed(2)}</td>
-                            <td>$${result.import_tax_usd.toFixed(2)}</td>
-                            <td>$${result.total_cost_usd.toFixed(2)}</td>
-                            <td>₪${result.total_cost_ils.toFixed(2)}</td>
-                        </tr>
-                    `;
-                }).join('');
-                resultsSection.classList.remove('d-none');
+        fileUploadArea.addEventListener('click', () => fileInput.click());
+        fileUploadArea.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.add('dragover');
+        });
+        fileUploadArea.addEventListener('dragleave', () => {
+            fileUploadArea.classList.remove('dragover');
+        });
+        fileUploadArea.addEventListener('drop', (e) => {
+            e.preventDefault();
+            fileUploadArea.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFileUpload(files[0]);
             }
         });
+
+        fileInput.addEventListener('change', (e) => {
+            if (e.target.files.length > 0) {
+                handleFileUpload(e.target.files[0]);
+            }
+        });
+
+        function handleFileUpload(file) {
+            if (!file.name.match(/\.(xls|xlsx)$/)) {
+                alert('אנא בחר קובץ אקסל (.xls או .xlsx)');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            document.getElementById('loading').style.display = 'block';
+            fileUploadArea.style.display = 'none';
+
+            fetch('/upload', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                document.getElementById('loading').style.display = 'none';
+                fileUploadArea.style.display = 'block';
+                
+                if (data.error) {
+                    alert('שגיאה: ' + data.error);
+                } else {
+                    // Clear existing products
+                    document.getElementById('productsContainer').innerHTML = '';
+                    productCount = 0;
+                    
+                    // Add products from Excel
+                    data.products.forEach(product => {
+                        addProduct(product.name, product.quantity, product.total_volume, product.cost_per_unit_usd);
+                    });
+                    
+                    alert(data.message);
+                }
+            })
+            .catch(error => {
+                document.getElementById('loading').style.display = 'none';
+                fileUploadArea.style.display = 'block';
+                alert('שגיאה בהעלאת קובץ: ' + error.message);
+            });
+        }
+
+        function addProduct(name = '', quantity = '', totalVolume = '', costPerUnit = '') {
+            if (productCount >= 50) {
+                alert('מקסימום 50 מוצרים מותרים');
+                return;
+            }
+
+            const container = document.getElementById('productsContainer');
+            const productDiv = document.createElement('div');
+            productDiv.className = 'product-row';
+            productDiv.innerHTML = `
+                <div class="row">
+                    <div class="col-md-3 mb-3">
+                        <label class="form-label">שם מוצר</label>
+                        <input type="text" class="form-control product-name" value="${name}" required>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">כמות</label>
+                        <input type="number" class="form-control product-quantity" value="${quantity}" min="1" required>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">עלות ליחידה (דולר)</label>
+                        <input type="number" class="form-control product-cost" value="${costPerUnit}" step="0.01" required>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">נפח כולל (מ"ק)</label>
+                        <input type="number" class="form-control product-volume" value="${totalVolume}" step="0.01" required>
+                    </div>
+                    <div class="col-md-2 mb-3">
+                        <label class="form-label">נפח ליחידה (מ"ק)</label>
+                        <input type="number" class="form-control product-volume-per-unit" step="0.01" readonly>
+                    </div>
+                    <div class="col-md-1 mb-3 d-flex align-items-end">
+                        <button type="button" class="btn btn-danger" onclick="removeProduct(this)">
+                            <i class="fas fa-trash"></i>
+                        </button>
+                    </div>
+                </div>
+            `;
+            container.appendChild(productDiv);
+            productCount++;
+
+            // Add event listeners for auto-calculation
+            const quantityInput = productDiv.querySelector('.product-quantity');
+            const volumeInput = productDiv.querySelector('.product-volume');
+            const volumePerUnitInput = productDiv.querySelector('.product-volume-per-unit');
+
+            function updateVolumePerUnit() {
+                const quantity = parseFloat(quantityInput.value) || 0;
+                const volume = parseFloat(volumeInput.value) || 0;
+                if (quantity > 0) {
+                    volumePerUnitInput.value = (volume / quantity).toFixed(4);
+                } else {
+                    volumePerUnitInput.value = '';
+                }
+            }
+
+            quantityInput.addEventListener('input', updateVolumePerUnit);
+            volumeInput.addEventListener('input', updateVolumePerUnit);
+            updateVolumePerUnit();
+        }
+
+        function removeProduct(button) {
+            button.closest('.product-row').remove();
+            productCount--;
+        }
+
+        function calculateCosts() {
+            const products = [];
+            const productRows = document.querySelectorAll('.product-row');
+            
+            productRows.forEach(row => {
+                const name = row.querySelector('.product-name').value;
+                const quantity = row.querySelector('.product-quantity').value;
+                const totalVolume = row.querySelector('.product-volume').value;
+                const costPerUnit = row.querySelector('.product-cost').value;
+                
+                if (name && quantity && totalVolume && costPerUnit) {
+                    products.push({
+                        name: name,
+                        quantity: parseInt(quantity),
+                        total_volume: parseFloat(totalVolume),
+                        cost_per_unit_usd: parseFloat(costPerUnit)
+                    });
+                }
+            });
+
+            if (products.length === 0) {
+                alert('אנא הוסף לפחות מוצר אחד');
+                return;
+            }
+
+            const data = {
+                container_cost_usd: parseFloat(document.getElementById('containerCost').value),
+                container_volume: parseFloat(document.getElementById('containerVolume').value),
+                import_tax_rate: parseFloat(document.getElementById('importTaxRate').value) / 100,
+                usd_to_ils_rate: parseFloat(document.getElementById('usdToIlsRate').value),
+                local_transportation_ils: parseFloat(document.getElementById('localTransportation').value || 0),
+                unloading_cost_ils: parseFloat(document.getElementById('unloadingCost').value || 0),
+                products: products
+            };
+
+            fetch('/calculate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert('שגיאה: ' + data.error);
+                } else {
+                    displayResults(data.results);
+                }
+            })
+            .catch(error => {
+                alert('שגיאה בחישוב עלויות: ' + error.message);
+            });
+        }
+
+        function displayResults(results) {
+            const tbody = document.getElementById('resultsTableBody');
+            tbody.innerHTML = '';
+
+            results.forEach(result => {
+                const row = document.createElement('tr');
+                if (result.is_total) {
+                    row.className = 'total-row';
+                }
+                
+                row.innerHTML = `
+                    <td><strong>${result.name}</strong></td>
+                    <td>${result.quantity}</td>
+                    <td>${result.total_volume.toFixed(3)}</td>
+                    <td>${result.volume_per_unit.toFixed(4)}</td>
+                    <td>$${result.original_cost_per_unit_usd.toFixed(2)}</td>
+                    <td>$${result.shipping_cost_per_unit_usd.toFixed(2)}</td>
+                    <td>$${result.final_cost_per_unit_usd.toFixed(2)}</td>
+                    <td>$${result.shipping_cost_usd.toFixed(2)}</td>
+                    <td>$${result.import_tax_usd.toFixed(2)}</td>
+                    <td>$${result.total_cost_usd.toFixed(2)}</td>
+                    <td>₪${result.total_cost_ils.toFixed(2)}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('resultsSection').style.display = 'block';
+        }
+
+        // Initialize with one empty product
+        addProduct();
     </script>
 </body>
 </html> 

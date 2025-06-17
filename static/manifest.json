@@ -1,7 +1,7 @@
 {
-  "name": "Import Cost Calculator",
-  "short_name": "ImportCalc",
-  "description": "Calculate shipping costs for importing businesses",
+  "name": "מחשבון עלויות ייבוא",
+  "short_name": "מחשבון ייבוא",
+  "description": "חשב עלויות משלוח עבור עסקי ייבוא",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
@@ -22,6 +22,6 @@
     }
   ],
   "categories": ["business", "finance", "productivity"],
-  "lang": "en",
-  "dir": "ltr"
+  "lang": "he",
+  "dir": "rtl"
 } 

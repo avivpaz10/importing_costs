@@ -188,25 +188,97 @@ def find_numeric_value(row, search_terms, min_value=0, exclude_cols=None):
 
 def find_column_indices(df):
     """
-    Find the header row and identify the columns for Item NO., QTY(PCS), PRICE, and CBM.
-    Returns a dictionary with column indices.
+    Find the column indices for item number, quantity, price, and volume.
+    Uses multiple strategies to handle different Excel formats.
     """
     print("\nSearching for header row...")
     
-    # Search for the header row
+    # Strategy 1: Look for traditional header patterns
     header_row_idx = None
+    header_patterns = [
+        'Item NO.',
+        'Item No.',
+        'Item Number',
+        'Item',
+        'No.',
+        'Product',
+        'Description'
+    ]
+    
     for idx, row in df.iterrows():
-        if pd.notna(row[0]) and str(row[0]).strip().startswith('Item NO.'):
+        if pd.isna(row[0]):
+            continue
+            
+        first_col = str(row[0]).strip()
+        # Only consider this a header if it's a short, clean header (not company info)
+        if (any(pattern.lower() in first_col.lower() for pattern in header_patterns) and 
+            len(first_col) < 50 and  # Avoid long company descriptions
+            not any(word in first_col.lower() for word in ['company', 'ltd', 'co', 'tel', 'email', 'website', 'contact'])):
             header_row_idx = idx
-            print(f"Found header row at index {idx}")
+            print(f"Found header row at index {idx} (Strategy 1)")
             print("Header row contents:")
             for col_idx, value in enumerate(row):
                 if pd.notna(value):
                     print(f"Column {col_idx}: {value}")
             break
     
+    # Strategy 2: Look for any row with multiple header-like keywords
     if header_row_idx is None:
-        print("Could not find header row starting with 'Item NO.'")
+        print("Strategy 1 failed, trying Strategy 2...")
+        for idx, row in df.iterrows():
+            if pd.isna(row[0]):
+                continue
+                
+            # Check if this row has multiple non-empty cells that look like headers
+            header_like_cells = 0
+            header_content = []
+            
+            for col_idx, value in enumerate(row):
+                if pd.notna(value):
+                    value_str = str(value).strip().upper()
+                    # Look for common header keywords
+                    header_keywords = [
+                        'ITEM', 'NO', 'NUMBER', 'PRODUCT', 'DESCRIPTION', 'NAME',
+                        'QTY', 'QUANTITY', 'PCS', 'PIECES', 'UNITS',
+                        'PRICE', 'COST', 'AMOUNT', 'USD', '$', 'UNIT PRICE',
+                        'CBM', 'VOLUME', 'SIZE', 'DIMENSION', 'M3', 'CUBIC',
+                        'TOTAL', 'SUM', 'GRAND'
+                    ]
+                    
+                    for keyword in header_keywords:
+                        if keyword in value_str:
+                            header_like_cells += 1
+                            header_content.append(f"Col{col_idx}: {value_str}")
+                            break
+            
+            if header_like_cells >= 2:  # At least 2 columns look like headers
+                header_row_idx = idx
+                print(f"Found header row at index {idx} (Strategy 2)")
+                print(f"Header content: {header_content}")
+                break
+    
+    # Strategy 3: Look for the row before the first product-like row
+    if header_row_idx is None:
+        print("Strategy 2 failed, trying Strategy 3...")
+        for idx in range(1, len(df)):
+            row = df.iloc[idx]
+            if pd.notna(row[0]):
+                first_col = str(row[0]).strip()
+                # Check if this looks like a product row (alphanumeric content)
+                if any(c.isalnum() for c in first_col) and len(first_col) > 2:
+                    # Check if previous row might be a header
+                    prev_row = df.iloc[idx - 1]
+                    if not pd.isna(prev_row[0]):
+                        prev_first_col = str(prev_row[0]).strip()
+                        # If previous row has short text, it might be a header
+                        if len(prev_first_col) < 20 and any(c.isalpha() for c in prev_first_col):
+                            header_row_idx = idx - 1
+                            print(f"Found header row at index {header_row_idx} (Strategy 3)")
+                            print(f"Header: {prev_first_col}")
+                            break
+    
+    if header_row_idx is None:
+        print("Could not find header row with any strategy")
         return None
     
     # Get the header row
@@ -220,32 +292,146 @@ def find_column_indices(df):
         'volume': None
     }
     
-    # Search for each column
+    # Search for each column with more flexible patterns
+    price_candidates = []
+    unit_price_candidates = []
+    total_price_candidates = []
     for col_idx, value in enumerate(header_row):
         if pd.isna(value):
             continue
-            
         value = str(value).strip().upper()
-        
-        # Look for quantity column
-        if 'QTY' in value or '(PCS)' in value:
+
+        # Look for quantity column with multiple patterns
+        if any(pattern in value for pattern in ['QTY', 'QUANTITY', '(PCS)', 'PCS', 'UNITS', 'PIECES', 'NO.']):
             column_indices['quantity'] = col_idx
             print(f"Found quantity column at {col_idx}: {value}")
-            
-        # Look for price column
-        elif 'PRICE' in value:
-            column_indices['price'] = col_idx
-            print(f"Found price column at {col_idx}: {value}")
-            
-        # Look for volume column
-        elif 'CBM' in value:
+
+        # Look for price column with multiple patterns
+        elif any(pattern in value for pattern in ['PRICE', 'COST', 'AMOUNT', 'USD', '$', 'UNIT PRICE', 'RATE']):
+            price_candidates.append((col_idx, value))
+            print(f"Found price candidate at {col_idx}: {value}")
+            # Prioritize unit price columns
+            if 'UNIT' in value or 'PER' in value:
+                unit_price_candidates.append((col_idx, value))
+                print(f"  -> Unit price candidate")
+            # If header contains 'TOTAL' or 'AMOUNT', treat as total price
+            elif 'TOTAL' in value or 'AMOUNT' in value:
+                total_price_candidates.append((col_idx, value))
+                print(f"  -> Total price candidate")
+            else:
+                print(f"  -> Regular price candidate")
+
+        # Look for volume column with multiple patterns
+        elif any(pattern in value for pattern in ['CBM', 'VOLUME', 'SIZE', 'DIMENSION', 'M3', 'CUBIC', 'SPACE']):
             column_indices['volume'] = col_idx
             print(f"Found volume column at {col_idx}: {value}")
+
+    print(f"\nPrice candidates found: {len(price_candidates)}")
+    for col_idx, value in price_candidates:
+        print(f"  Column {col_idx}: {value}")
+
+    # Decide which price column to use
+    if unit_price_candidates:
+        column_indices['price'] = unit_price_candidates[0][0]
+        print(f"Selected unit price column at {unit_price_candidates[0][0]}: {unit_price_candidates[0][1]}")
+        if total_price_candidates:
+            print(f"Warning: Both unit price and total price columns found. Using unit price column {unit_price_candidates[0][0]}.")
+    elif price_candidates:
+        if len(price_candidates) == 1:
+            # Only one price-like column, use it (old format support)
+            column_indices['price'] = price_candidates[0][0]
+            print(f"Selected price column at {price_candidates[0][0]}: {price_candidates[0][1]} (single candidate, fallback)")
+        else:
+            # Prefer one without 'TOTAL' or 'AMOUNT'
+            non_total_candidates = [(col_idx, value) for col_idx, value in price_candidates if 'TOTAL' not in value and 'AMOUNT' not in value]
+            if non_total_candidates:
+                column_indices['price'] = non_total_candidates[0][0]
+                print(f"Selected price column at {non_total_candidates[0][0]}: {non_total_candidates[0][1]} (no 'total'/'amount')")
+            else:
+                # Fallback: pick the leftmost price-like column
+                column_indices['price'] = price_candidates[0][0]
+                print(f"Warning: Ambiguous price columns, using leftmost at {price_candidates[0][0]}: {price_candidates[0][1]}")
+    else:
+        print("No price candidates found!")
+
+    # If we didn't find some columns, try to infer them from the data
+    if column_indices['quantity'] is None:
+        print("Quantity column not found, trying to infer from data...")
+        # Look for numeric columns that might be quantity
+        for col_idx, value in enumerate(header_row):
+            if pd.isna(value):
+                continue
+            # Check if this column has mostly integer values
+            numeric_count = 0
+            total_count = 0
+            for row_idx in range(header_row_idx + 1, min(header_row_idx + 10, len(df))):
+                if pd.notna(df.iloc[row_idx, col_idx]):
+                    total_count += 1
+                    try:
+                        val = float(df.iloc[row_idx, col_idx])
+                        if val == int(val) and val > 0:  # Integer and positive
+                            numeric_count += 1
+                    except:
+                        pass
+            
+            if total_count > 0 and numeric_count / total_count > 0.7:  # 70% are integers
+                column_indices['quantity'] = col_idx
+                print(f"Inferred quantity column at {col_idx} based on data pattern")
+                break
     
-    # Verify we found all required columns
-    missing_columns = [col for col, idx in column_indices.items() if idx is None]
-    if missing_columns:
-        print(f"Warning: Could not find columns for: {', '.join(missing_columns)}")
+    if column_indices['price'] is None:
+        print("Price column not found, trying to infer from data...")
+        # Look for numeric columns that might be price
+        for col_idx, value in enumerate(header_row):
+            if pd.isna(value):
+                continue
+            # Check if this column has decimal values
+            decimal_count = 0
+            total_count = 0
+            for row_idx in range(header_row_idx + 1, min(header_row_idx + 10, len(df))):
+                if pd.notna(df.iloc[row_idx, col_idx]):
+                    total_count += 1
+                    try:
+                        val = float(df.iloc[row_idx, col_idx])
+                        if val > 0:  # Positive values
+                            decimal_count += 1
+                    except:
+                        pass
+            
+            if total_count > 0 and decimal_count / total_count > 0.5:  # 50% are positive numbers
+                column_indices['price'] = col_idx
+                print(f"Inferred price column at {col_idx} based on data pattern")
+                break
+    
+    if column_indices['volume'] is None:
+        print("Volume column not found, trying to infer from data...")
+        # Look for numeric columns that might be volume (usually smaller decimal values)
+        for col_idx, value in enumerate(header_row):
+            if pd.isna(value):
+                continue
+            # Check if this column has small decimal values (typical for volume)
+            small_decimal_count = 0
+            total_count = 0
+            for row_idx in range(header_row_idx + 1, min(header_row_idx + 10, len(df))):
+                if pd.notna(df.iloc[row_idx, col_idx]):
+                    total_count += 1
+                    try:
+                        val = float(df.iloc[row_idx, col_idx])
+                        if 0 < val < 10:  # Small positive values typical for volume
+                            small_decimal_count += 1
+                    except:
+                        pass
+            
+            if total_count > 0 and small_decimal_count / total_count > 0.3:  # 30% are small decimals
+                column_indices['volume'] = col_idx
+                print(f"Inferred volume column at {col_idx} based on data pattern")
+                break
+    
+    # Verify we found at least some required columns
+    found_columns = [col for col, idx in column_indices.items() if idx is not None]
+    if len(found_columns) < 2:  # Need at least item_no and one other column
+        print(f"Warning: Could not find enough columns. Found: {found_columns}")
+        print(f"Column indices: {column_indices}")
         return None
     
     print("\nFound column indices:")
@@ -263,16 +449,50 @@ def find_product_rows(df):
     """
     print("\nSearching for product rows...")
     
-    # Find the header row
+    # Find the header row with multiple possible patterns
     header_row_idx = None
+    header_patterns = [
+        'Item NO.',
+        'Item No.',
+        'Item Number',
+        'Item',
+        'No.',
+        'Product',
+        'Description'
+    ]
+    
     for idx, row in df.iterrows():
-        if pd.notna(row[0]) and str(row[0]).strip().startswith('Item NO.'):
+        if pd.isna(row[0]):
+            continue
+            
+        first_col = str(row[0]).strip()
+        if any(pattern.lower() in first_col.lower() for pattern in header_patterns):
             header_row_idx = idx
             print(f"Found header row at index {idx}")
             break
     
     if header_row_idx is None:
-        print("Could not find header row starting with 'Item NO.'")
+        # Try alternative approach - look for any row with header-like content
+        for idx, row in df.iterrows():
+            if pd.isna(row[0]):
+                continue
+                
+            # Check if this row has multiple non-empty cells that look like headers
+            header_like_cells = 0
+            for col_idx, value in enumerate(row):
+                if pd.notna(value):
+                    value_str = str(value).strip().upper()
+                    # Look for common header keywords
+                    if any(keyword in value_str for keyword in ['QTY', 'QUANTITY', 'PRICE', 'CBM', 'VOLUME', 'AMOUNT', 'COST']):
+                        header_like_cells += 1
+            
+            if header_like_cells >= 2:  # At least 2 columns look like headers
+                header_row_idx = idx
+                print(f"Found alternative header row at index {idx}")
+                break
+    
+    if header_row_idx is None:
+        print("Could not find header row")
         return None, None
     
     # Start row is the next row after the header
@@ -281,6 +501,8 @@ def find_product_rows(df):
     
     # Find the end row by looking for the first row without a product code
     end_row = None
+    
+    # Strategy 1: Look for rows without alphanumeric content in first column
     for idx, row in df.iloc[start_row:].iterrows():
         # Skip empty rows
         if row.isna().all():
@@ -290,8 +512,60 @@ def find_product_rows(df):
         first_col = str(row[0]).strip() if pd.notna(row[0]) else ''
         if not first_col or not any(c.isalnum() for c in first_col):  # No alphanumeric characters means no product code
             end_row = idx - 1
-            print(f"Found end of products at row {end_row}")
+            print(f"Found end of products at row {end_row} (Strategy 1)")
             break
+    
+    # Strategy 2: Look for summary/total rows
+    if end_row is None:
+        for idx, row in df.iloc[start_row:].iterrows():
+            if pd.isna(row[0]):
+                continue
+                
+            first_col = str(row[0]).strip().upper()
+            # Look for summary keywords
+            summary_keywords = ['TOTAL', 'SUM', 'GRAND TOTAL', 'SUBTOTAL', 'TOTALS']
+            if any(keyword in first_col for keyword in summary_keywords):
+                end_row = idx - 1
+                print(f"Found end of products at row {end_row} (Strategy 2 - found summary row)")
+                break
+    
+    # Strategy 3: Look for rows with very different data patterns
+    if end_row is None:
+        for idx, row in df.iloc[start_row:].iterrows():
+            if pd.isna(row[0]):
+                continue
+                
+            # Check if this row has a very different pattern (e.g., all text, no numbers)
+            numeric_count = 0
+            total_cells = 0
+            for col_idx, val in enumerate(row):
+                if pd.notna(val):
+                    total_cells += 1
+                    try:
+                        float(val)
+                        numeric_count += 1
+                    except:
+                        pass
+            
+            # If this row has no numeric data and previous rows did, it might be the end
+            if total_cells > 0 and numeric_count == 0:
+                # Check if previous rows had numeric data
+                prev_row = df.iloc[idx - 1]
+                prev_numeric_count = 0
+                prev_total_cells = 0
+                for col_idx, val in enumerate(prev_row):
+                    if pd.notna(val):
+                        prev_total_cells += 1
+                        try:
+                            float(val)
+                            prev_numeric_count += 1
+                        except:
+                            pass
+                
+                if prev_total_cells > 0 and prev_numeric_count > 0:
+                    end_row = idx - 1
+                    print(f"Found end of products at row {end_row} (Strategy 3 - data pattern change)")
+                    break
     
     # If we didn't find an end row, use the last non-empty row
     if end_row is None:
@@ -354,6 +628,17 @@ def process_excel_data(df):
             continue
             
         try:
+            # Check if all required columns were found
+            if column_indices['quantity'] is None:
+                print(f"Error: Quantity column not found")
+                continue
+            if column_indices['price'] is None:
+                print(f"Error: Price column not found")
+                continue
+            if column_indices['volume'] is None:
+                print(f"Error: Volume column not found")
+                continue
+            
             # Get values from the identified columns
             quantity = safe_float_convert(row[column_indices['quantity']])
             price_per_unit = safe_float_convert(row[column_indices['price']])
@@ -383,6 +668,7 @@ def process_excel_data(df):
                 print(f"Skipping product: No valid quantity or price found")
         except Exception as e:
             print(f"Error processing row {current_row}, skipping: {e}")
+            print(f"Row data: {[str(val) if pd.notna(val) else 'NaN' for val in row]}")
             continue
     
     print(f"\nTotal products found: {len(products)}")
@@ -409,49 +695,145 @@ def process_excel_data(df):
     }
 
 def analyze_excel_structure(filepath):
-    """Analyze the Excel file structure to understand its format."""
+    """
+    Analyze the structure of an Excel file to help understand its format.
+    """
     try:
-        # Read all sheets
-        xls = pd.ExcelFile(filepath)
-        print(f"\nExcel file contains {len(xls.sheet_names)} sheets: {xls.sheet_names}")
+        print(f"\nAnalyzing Excel file structure: {filepath}")
         
-        # Read each sheet
-        for sheet_name in xls.sheet_names:
-            print(f"\nAnalyzing sheet: {sheet_name}")
-            df = pd.read_excel(filepath, sheet_name=sheet_name)
+        # Read the Excel file with fallback for format detection
+        df = None
+        try:
+            if filepath.endswith('.xls'):
+                # Try xlrd first for .xls files
+                df = pd.read_excel(filepath, header=None, engine='xlrd')
+            else:
+                # Use openpyxl for .xlsx files
+                df = pd.read_excel(filepath, header=None, engine='openpyxl')
+        except Exception as e:
+            # If xlrd fails, try openpyxl (file might be .xlsx with .xls extension)
+            if filepath.endswith('.xls'):
+                print(f"xlrd failed, trying openpyxl: {str(e)}")
+                try:
+                    df = pd.read_excel(filepath, header=None, engine='openpyxl')
+                except Exception as e2:
+                    print(f"openpyxl also failed: {str(e2)}")
+                    raise e2
+            else:
+                raise e
+        
+        if df is None:
+            raise Exception("Could not read Excel file with any engine")
+        
+        print(f"File shape: {df.shape} (rows, columns)")
+        
+        # Show first 15 rows to understand structure
+        print("\nFirst 15 rows of the file:")
+        for idx in range(min(15, len(df))):
+            row = df.iloc[idx]
+            row_data = []
+            for col_idx, val in enumerate(row):
+                if pd.notna(val):
+                    val_str = str(val).strip()
+                    if len(val_str) > 30:
+                        val_str = val_str[:27] + "..."
+                    row_data.append(f"Col{col_idx}: {val_str}")
+                else:
+                    row_data.append(f"Col{col_idx}: <empty>")
+            print(f"Row {idx}: {row_data}")
+        
+        # Look for potential header rows with more flexible patterns
+        print("\nSearching for potential header rows...")
+        header_candidates = []
+        
+        for idx in range(min(15, len(df))):
+            row = df.iloc[idx]
+            if pd.isna(row[0]):
+                continue
+                
+            # Check all columns in this row for header-like content
+            header_score = 0
+            header_content = []
             
-            # Print basic information
-            print(f"Number of rows: {len(df)}")
-            print(f"Number of columns: {len(df.columns)}")
-            print("\nColumn names:")
-            for col in df.columns:
-                print(f"- {col}")
+            for col_idx, value in enumerate(row):
+                if pd.notna(value):
+                    value_str = str(value).strip().upper()
+                    # Look for common header keywords
+                    header_keywords = [
+                        'ITEM', 'NO', 'NUMBER', 'PRODUCT', 'DESCRIPTION', 'NAME',
+                        'QTY', 'QUANTITY', 'PCS', 'PIECES', 'UNITS',
+                        'PRICE', 'COST', 'AMOUNT', 'USD', '$', 'UNIT PRICE',
+                        'CBM', 'VOLUME', 'SIZE', 'DIMENSION', 'M3', 'CUBIC',
+                        'TOTAL', 'SUM', 'GRAND'
+                    ]
+                    
+                    for keyword in header_keywords:
+                        if keyword in value_str:
+                            header_score += 1
+                            header_content.append(f"Col{col_idx}: {value_str}")
+                            break
             
-            # Print first few rows to understand the data structure
-            print("\nFirst few rows of data:")
-            print(df.head().to_string())
+            if header_score >= 2:  # At least 2 columns look like headers
+                header_candidates.append((idx, header_score, header_content))
+                print(f"Row {idx} - Score {header_score}: {header_content}")
+        
+        # Look for numeric data patterns in each column
+        print("\nAnalyzing numeric data patterns...")
+        for col_idx in range(min(7, len(df.columns))):
+            numeric_count = 0
+            integer_count = 0
+            decimal_count = 0
+            total_count = 0
+            sample_values = []
             
-            # Look for potential product information
-            print("\nLooking for product-related columns...")
-            for col in df.columns:
-                col_lower = str(col).lower()
-                if any(term in col_lower for term in ['product', 'item', 'description', 'name', 'article']):
-                    print(f"Potential product name column: {col}")
-                if any(term in col_lower for term in ['qty', 'quantity', 'amount', 'units', 'pcs']):
-                    print(f"Potential quantity column: {col}")
-                if any(term in col_lower for term in ['volume', 'cbm', 'm3', 'cubic']):
-                    print(f"Potential volume column: {col}")
-                if any(term in col_lower for term in ['cost', 'price', 'usd', '$', 'value']):
-                    print(f"Potential cost column: {col}")
+            for row_idx in range(1, min(20, len(df))):  # Skip first row, check next 19
+                if pd.notna(df.iloc[row_idx, col_idx]):
+                    total_count += 1
+                    try:
+                        val = float(df.iloc[row_idx, col_idx])
+                        numeric_count += 1
+                        sample_values.append(val)
+                        
+                        if val == int(val):
+                            integer_count += 1
+                        else:
+                            decimal_count += 1
+                    except:
+                        pass
             
-            # Look for any numeric columns that might contain quantities or volumes
-            print("\nNumeric columns that might contain quantities or volumes:")
-            for col in df.columns:
-                if pd.api.types.is_numeric_dtype(df[col]):
-                    print(f"- {col}: contains values between {df[col].min()} and {df[col].max()}")
-            
-            return df  # Return the first sheet's data for now
-            
+            if total_count > 0:
+                numeric_ratio = numeric_count / total_count
+                integer_ratio = integer_count / total_count if numeric_count > 0 else 0
+                decimal_ratio = decimal_count / total_count if numeric_count > 0 else 0
+                
+                print(f"Column {col_idx}: {numeric_ratio:.1%} numeric ({integer_ratio:.1%} integers, {decimal_ratio:.1%} decimals)")
+                print(f"  Sample values: {sample_values[:5]}")
+        
+        # Look for product-like rows (rows with alphanumeric content in first column)
+        print("\nSearching for product-like rows...")
+        product_candidates = []
+        for idx in range(1, min(20, len(df))):  # Skip first row
+            row = df.iloc[idx]
+            if pd.notna(row[0]):
+                first_col = str(row[0]).strip()
+                # Check if first column contains alphanumeric content (potential product code)
+                if any(c.isalnum() for c in first_col) and len(first_col) > 2:
+                    # Check if this row has some numeric data
+                    numeric_in_row = 0
+                    for col_idx, val in enumerate(row[1:], 1):  # Check other columns
+                        if pd.notna(val):
+                            try:
+                                float(val)
+                                numeric_in_row += 1
+                            except:
+                                pass
+                    
+                    if numeric_in_row > 0:
+                        product_candidates.append((idx, first_col, numeric_in_row))
+                        print(f"Row {idx}: '{first_col[:30]}...' - {numeric_in_row} numeric columns")
+        
+        return df
+        
     except Exception as e:
         print(f"Error analyzing Excel file: {str(e)}")
         return None
@@ -494,6 +876,9 @@ class ContainerCalculator:
             # Total cost is just shipping + import tax
             total_product_cost_usd = shipping_cost_usd + import_tax_usd
             total_product_cost_ils = total_product_cost_usd * self.usd_to_ils_rate
+            
+            # Calculate final cost per unit (original unit price + shipping cost per unit)
+            final_cost_per_unit_usd = product['cost_per_unit_usd'] + shipping_cost_per_unit_usd
 
             total_shipping_usd += shipping_cost_usd
             total_import_tax_usd += import_tax_usd
@@ -505,7 +890,9 @@ class ContainerCalculator:
                 'quantity': product['quantity'],
                 'total_volume': product['total_volume'],
                 'volume_per_unit': product['volume_per_unit'],
+                'original_cost_per_unit_usd': round(product['cost_per_unit_usd'], 2),
                 'shipping_cost_per_unit_usd': round(shipping_cost_per_unit_usd, 2),
+                'final_cost_per_unit_usd': round(final_cost_per_unit_usd, 2),
                 'shipping_cost_usd': round(shipping_cost_usd, 2),
                 'import_tax_usd': round(import_tax_usd, 2),
                 'total_cost_usd': round(total_product_cost_usd, 2),
@@ -520,7 +907,9 @@ class ContainerCalculator:
             'quantity': sum(p['quantity'] for p in self.products),
             'total_volume': total_volume,
             'volume_per_unit': total_volume / sum(p['quantity'] for p in self.products) if sum(p['quantity'] for p in self.products) > 0 else 0,
+            'original_cost_per_unit_usd': 0,  # No per-unit original cost for total
             'shipping_cost_per_unit_usd': 0,  # No per-unit shipping cost for total
+            'final_cost_per_unit_usd': 0,  # No per-unit final cost for total
             'shipping_cost_usd': round(total_shipping_usd, 2),
             'import_tax_usd': round(total_import_tax_usd, 2),
             'total_cost_usd': round(total_cost_usd, 2),
@@ -553,14 +942,14 @@ def icon_512():
 @app.route('/upload', methods=['POST'])
 def upload_file():
     if 'file' not in request.files:
-        return jsonify({'error': 'No file part'}), 400
+        return jsonify({'error': 'לא נבחר קובץ'}), 400
     
     file = request.files['file']
     if file.filename == '':
-        return jsonify({'error': 'No selected file'}), 400
+        return jsonify({'error': 'לא נבחר קובץ'}), 400
     
     if not file.filename.endswith(('.xls', '.xlsx')):
-        return jsonify({'error': 'File must be Excel format'}), 400
+        return jsonify({'error': 'הקובץ חייב להיות בפורמט אקסל (.xls או .xlsx)'}), 400
     
     try:
         # Save the file temporarily
@@ -569,10 +958,13 @@ def upload_file():
         file.save(filepath)
         
         print(f"\nReading Excel file: {filename}")
-        # Read the Excel file
-        df = pd.read_excel(filepath, header=None)
         
-        # Process the data
+        # First, analyze the file structure
+        df = analyze_excel_structure(filepath)
+        if df is None:
+            return jsonify({'error': 'שגיאה בקריאת קובץ אקסל'}), 500
+        
+        # Process the data using the DataFrame from analyze_excel_structure
         result = process_excel_data(df)
         
         # Clean up
@@ -581,9 +973,9 @@ def upload_file():
         # Format the response with a more informative message
         total_products = len(result['products'])
         if total_products > 0:
-            message = f"Successfully processed {total_products} products from the Excel file."
+            message = f"הקובץ עובד בהצלחה! נמצאו {total_products} מוצרים."
         else:
-            message = "No valid products found in the Excel file. Please check the file format."
+            message = "לא נמצאו מוצרים תקינים בקובץ. אנא בדוק את פורמט הקובץ."
         
         response = {
             'message': message,
@@ -596,9 +988,9 @@ def upload_file():
         
     except Exception as e:
         print(f"Error processing file: {str(e)}")
-        if os.path.exists(filepath):
+        if 'filepath' in locals() and os.path.exists(filepath):
             os.remove(filepath)
-        return jsonify({'error': f'Error processing file: {str(e)}'}), 500
+        return jsonify({'error': f'שגיאה בעיבוד הקובץ: {str(e)}'}), 500
 
 @app.route('/calculate', methods=['POST'])
 def calculate():
@@ -607,7 +999,7 @@ def calculate():
         # Get JSON data from request
         data = request.get_json()
         if not data:
-            return jsonify({'error': 'No data provided'}), 400
+            return jsonify({'error': 'לא סופקו נתונים'}), 400
 
         # Extract values from JSON data
         container_cost = float(data['container_cost_usd'])
@@ -619,7 +1011,7 @@ def calculate():
         products = data['products']
 
         if not products:
-            return jsonify({'error': 'No products found'}), 400
+            return jsonify({'error': 'לא נמצאו מוצרים'}), 400
 
         # Initialize calculator
         calculator = ContainerCalculator()
@@ -654,11 +1046,11 @@ def calculate():
         })
 
     except KeyError as e:
-        return jsonify({'error': f'Missing required field: {str(e)}'}), 400
+        return jsonify({'error': f'שדה חסר: {str(e)}'}), 400
     except ValueError as e:
         return jsonify({'error': str(e)}), 400
     except Exception as e:
-        return jsonify({'error': f'An error occurred: {str(e)}'}), 500
+        return jsonify({'error': f'אירעה שגיאה: {str(e)}'}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
