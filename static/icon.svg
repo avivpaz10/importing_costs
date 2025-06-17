@@ -1,0 +1,26 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="512" height="512" fill="#007bff" rx="80"/>
+  
+  <!-- Ship/Container -->
+  <rect x="100" y="300" width="312" height="80" fill="#ffffff" rx="10"/>
+  <rect x="120" y="320" width="272" height="40" fill="#e9ecef" rx="5"/>
+  
+  <!-- Calculator -->
+  <rect x="150" y="150" width="212" height="120" fill="#ffffff" rx="15"/>
+  <rect x="170" y="170" width="172" height="20" fill="#28a745" rx="5"/>
+  <rect x="170" y="200" width="40" height="30" fill="#6c757d" rx="5"/>
+  <rect x="220" y="200" width="40" height="30" fill="#6c757d" rx="5"/>
+  <rect x="270" y="200" width="40" height="30" fill="#6c757d" rx="5"/>
+  <rect x="320" y="200" width="22" height="30" fill="#6c757d" rx="5"/>
+  <rect x="170" y="240" width="40" height="30" fill="#6c757d" rx="5"/>
+  <rect x="220" y="240" width="40" height="30" fill="#6c757d" rx="5"/>
+  <rect x="270" y="240" width="40" height="30" fill="#6c757d" rx="5"/>
+  <rect x="320" y="240" width="22" height="30" fill="#6c757d" rx="5"/>
+  
+  <!-- Dollar Sign -->
+  <text x="256" y="100" font-family="Arial, sans-serif" font-size="60" font-weight="bold" text-anchor="middle" fill="#ffffff">$</text>
+  
+  <!-- Import Text -->
+  <text x="256" y="450" font-family="Arial, sans-serif" font-size="24" font-weight="bold" text-anchor="middle" fill="#ffffff">IMPORT</text>
+</svg> 
