@@ -865,23 +865,43 @@ class ContainerCalculator:
         results = []
         total_shipping_usd = 0
         total_import_tax_usd = 0
+        total_local_transportation_usd = 0
+        total_unloading_usd = 0
         total_cost_usd = 0
         total_cost_ils = 0
 
         for product in self.products:
             volume_ratio = product['total_volume'] / total_volume
+            
+            # Calculate shipping costs
             shipping_cost_usd = self.container_cost_usd * volume_ratio
             shipping_cost_per_unit_usd = shipping_cost_usd / product['quantity'] if product['quantity'] > 0 else 0
+            
+            # Calculate import tax
             import_tax_usd = shipping_cost_usd * self.import_tax_rate
-            # Total cost is just shipping + import tax
-            total_product_cost_usd = shipping_cost_usd + import_tax_usd
+            
+            # Calculate local transportation and unloading costs (convert from ILS to USD)
+            local_transportation_usd = (self.local_transportation_ils * volume_ratio) / self.usd_to_ils_rate
+            unloading_cost_usd = (self.unloading_cost_ils * volume_ratio) / self.usd_to_ils_rate
+            
+            # Calculate per-unit local costs
+            local_transportation_per_unit_usd = local_transportation_usd / product['quantity'] if product['quantity'] > 0 else 0
+            unloading_per_unit_usd = unloading_cost_usd / product['quantity'] if product['quantity'] > 0 else 0
+            
+            # Total cost includes shipping, import tax, local transportation, and unloading
+            total_product_cost_usd = shipping_cost_usd + import_tax_usd + local_transportation_usd + unloading_cost_usd
             total_product_cost_ils = total_product_cost_usd * self.usd_to_ils_rate
             
-            # Calculate final cost per unit (original unit price + shipping cost per unit)
-            final_cost_per_unit_usd = product['cost_per_unit_usd'] + shipping_cost_per_unit_usd
+            # Calculate final cost per unit (original unit price + all shipping-related costs per unit)
+            final_cost_per_unit_usd = (product['cost_per_unit_usd'] + 
+                                     shipping_cost_per_unit_usd + 
+                                     local_transportation_per_unit_usd + 
+                                     unloading_per_unit_usd)
 
             total_shipping_usd += shipping_cost_usd
             total_import_tax_usd += import_tax_usd
+            total_local_transportation_usd += local_transportation_usd
+            total_unloading_usd += unloading_cost_usd
             total_cost_usd += total_product_cost_usd
             total_cost_ils += total_product_cost_ils
 
@@ -892,16 +912,18 @@ class ContainerCalculator:
                 'volume_per_unit': product['volume_per_unit'],
                 'original_cost_per_unit_usd': round(product['cost_per_unit_usd'], 2),
                 'shipping_cost_per_unit_usd': round(shipping_cost_per_unit_usd, 2),
+                'local_transportation_per_unit_usd': round(local_transportation_per_unit_usd, 2),
+                'unloading_per_unit_usd': round(unloading_per_unit_usd, 2),
                 'final_cost_per_unit_usd': round(final_cost_per_unit_usd, 2),
                 'shipping_cost_usd': round(shipping_cost_usd, 2),
                 'import_tax_usd': round(import_tax_usd, 2),
+                'local_transportation_usd': round(local_transportation_usd, 2),
+                'unloading_cost_usd': round(unloading_cost_usd, 2),
                 'total_cost_usd': round(total_product_cost_usd, 2),
                 'total_cost_ils': round(total_product_cost_ils, 2)
             })
 
         # Add totals row
-        total_cost_ils += (self.local_transportation_ils + self.unloading_cost_ils)
-        
         results.append({
             'name': 'TOTALS',
             'quantity': sum(p['quantity'] for p in self.products),
@@ -909,9 +931,13 @@ class ContainerCalculator:
             'volume_per_unit': total_volume / sum(p['quantity'] for p in self.products) if sum(p['quantity'] for p in self.products) > 0 else 0,
             'original_cost_per_unit_usd': 0,  # No per-unit original cost for total
             'shipping_cost_per_unit_usd': 0,  # No per-unit shipping cost for total
+            'local_transportation_per_unit_usd': 0,  # No per-unit local transportation cost for total
+            'unloading_per_unit_usd': 0,  # No per-unit unloading cost for total
             'final_cost_per_unit_usd': 0,  # No per-unit final cost for total
             'shipping_cost_usd': round(total_shipping_usd, 2),
             'import_tax_usd': round(total_import_tax_usd, 2),
+            'local_transportation_usd': round(total_local_transportation_usd, 2),
+            'unloading_cost_usd': round(total_unloading_usd, 2),
             'total_cost_usd': round(total_cost_usd, 2),
             'total_cost_ils': round(total_cost_ils, 2),
             'is_total': True

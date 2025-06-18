@@ -116,6 +116,7 @@
             border-radius: 15px;
             overflow: hidden;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.08);
+            border: 2px solid #e9ecef;
         }
         
         .table {
@@ -128,21 +129,139 @@
             border: none;
             padding: 15px;
             font-weight: 600;
+            text-align: center;
+            vertical-align: middle;
+            font-size: 0.9em;
+        }
+        
+        .table th:first-child {
+            text-align: right;
         }
         
         .table td {
             padding: 12px 15px;
             vertical-align: middle;
+            text-align: center;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        .table td:first-child {
+            text-align: right;
+            font-weight: 600;
         }
         
         .table tbody tr:nth-child(even) {
-            background-color: #f8f9fa;
+            background: linear-gradient(135deg, #e8f5e8, #d4edda);
+        }
+        
+        .table tbody tr:nth-child(odd) {
+            background: linear-gradient(135deg, #f0f8ff, #e6f3ff);
+        }
+        
+        .table tbody tr:nth-child(3n) {
+            background: linear-gradient(135deg, #fff8e1, #ffecb3);
+        }
+        
+        .table tbody tr:nth-child(4n) {
+            background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+        }
+        
+        .table tbody tr:nth-child(5n) {
+            background: linear-gradient(135deg, #e0f2f1, #b2dfdb);
+        }
+        
+        .table tbody tr:hover {
+            background: linear-gradient(135deg, #e3f2fd, #bbdefb) !important;
+            transform: scale(1.01);
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
         }
         
         .total-row {
             background: linear-gradient(135deg, #28a745, #1e7e34) !important;
             color: white;
             font-weight: bold;
+            font-size: 1.1em;
+            box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+        }
+        
+        .total-row:hover {
+            background: linear-gradient(135deg, #218838, #1e7e34) !important;
+            transform: scale(1.02);
+        }
+        
+        .total-row td {
+            border-bottom: none;
+        }
+        
+        .cost-column {
+            background: linear-gradient(135deg, #fff3cd, #ffeaa7);
+            font-weight: 600;
+        }
+        
+        .cost-column.usd {
+            background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+            color: #0c5460;
+        }
+        
+        .cost-column.ils {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            color: #155724;
+        }
+        
+        .volume-column {
+            background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+            color: #721c24;
+            font-weight: 600;
+        }
+        
+        .product-name-column {
+            background: linear-gradient(135deg, #e2e3e5, #d6d8db);
+            color: #383d41;
+            font-weight: 600;
+        }
+        
+        .quantity-column {
+            background: linear-gradient(135deg, #e8f4fd, #d1ecf1);
+            color: #0c5460;
+            font-weight: 600;
+        }
+        
+        .per-unit-column {
+            background: linear-gradient(135deg, #fff8e1, #ffecb3);
+            color: #856404;
+            font-weight: 600;
+        }
+        
+        .shipping-column {
+            background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+            color: #6f42c1;
+            font-weight: 600;
+        }
+        
+        .tax-column {
+            background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
+            color: #856404;
+            font-weight: 600;
+        }
+        
+        .local-column {
+            background: linear-gradient(135deg, #e0f2f1, #b2dfdb);
+            color: #00695c;
+            font-weight: 600;
+        }
+        
+        .unloading-column {
+            background: linear-gradient(135deg, #fce4ec, #f8bbd9);
+            color: #c2185b;
+            font-weight: 600;
+        }
+        
+        .final-cost-column {
+            background: linear-gradient(135deg, #ffebee, #ffcdd2);
+            color: #c62828;
+            font-weight: bold;
+            font-size: 1.1em;
         }
         
         .file-upload-area {
@@ -199,6 +318,25 @@
             display: none;
         }
         
+        .upload-message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 15px;
+            font-weight: 600;
+        }
+        
+        .upload-message.success {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        
+        .upload-message.error {
+            background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        
         @media (max-width: 768px) {
             .main-container {
                 margin: 10px;
@@ -251,6 +389,7 @@
                         </div>
                         <p class="mt-2">מעבד קובץ אקסל...</p>
                     </div>
+                    <div id="uploadMessage" style="display: none;"></div>
                 </div>
 
                 <!-- Container Settings Section -->
@@ -272,7 +411,7 @@
                             </div>
                         </div>
                         <div class="col-md-6 mb-3">
-                            <label for="importTaxRate" class="form-label">שיעור מכס ייבוא</label>
+                            <label for="importTaxRate" class="form-label">מע״מ</label>
                             <div class="input-group">
                                 <input type="number" class="form-control" id="importTaxRate" step="0.01" required>
                                 <span class="input-group-text">%</span>
@@ -333,11 +472,15 @@
                                     <th>נפח ליחידה (מ"ק)</th>
                                     <th>עלות מקורית ליחידה (דולר)</th>
                                     <th>עלות משלוח ליחידה (דולר)</th>
-                                    <th>עלות סופית ליחידה (דולר)</th>
+                                    <th>הובלה מקומית ליחידה (דולר)</th>
+                                    <th>פריקה ליחידה (דולר)</th>
                                     <th>עלות משלוח (דולר)</th>
-                                    <th>מכס ייבוא (דולר)</th>
-                                    <th>עלות כוללת (דולר)</th>
-                                    <th>עלות כוללת (שקל)</th>
+                                    <th>מע״מ (דולר)</th>
+                                    <th>הובלה מקומית (דולר)</th>
+                                    <th>פריקה (דולר)</th>
+                                    <th>עלות משלוח כוללת (דולר)</th>
+                                    <th>עלות משלוח כוללת (שקל)</th>
+                                    <th>עלות סופית ליחידה (דולר)</th>
                                 </tr>
                             </thead>
                             <tbody id="resultsTableBody">
@@ -406,7 +549,7 @@
 
         function handleFileUpload(file) {
             if (!file.name.match(/\.(xls|xlsx)$/)) {
-                alert('אנא בחר קובץ אקסל (.xls או .xlsx)');
+                showUploadMessage('אנא בחר קובץ אקסל (.xls או .xlsx)', 'error');
                 return;
             }
 
@@ -415,6 +558,7 @@
 
             document.getElementById('loading').style.display = 'block';
             fileUploadArea.style.display = 'none';
+            hideUploadMessage();
 
             fetch('/upload', {
                 method: 'POST',
@@ -426,7 +570,7 @@
                 fileUploadArea.style.display = 'block';
                 
                 if (data.error) {
-                    alert('שגיאה: ' + data.error);
+                    showUploadMessage('שגיאה: ' + data.error, 'error');
                 } else {
                     // Clear existing products
                     document.getElementById('productsContainer').innerHTML = '';
@@ -437,14 +581,25 @@
                         addProduct(product.name, product.quantity, product.total_volume, product.cost_per_unit_usd);
                     });
                     
-                    alert(data.message);
+                    showUploadMessage(data.message, 'success');
                 }
             })
             .catch(error => {
                 document.getElementById('loading').style.display = 'none';
                 fileUploadArea.style.display = 'block';
-                alert('שגיאה בהעלאת קובץ: ' + error.message);
+                showUploadMessage('שגיאה בהעלאת קובץ: ' + error.message, 'error');
             });
+        }
+
+        function showUploadMessage(message, type) {
+            const messageDiv = document.getElementById('uploadMessage');
+            messageDiv.textContent = message;
+            messageDiv.className = 'upload-message ' + type;
+            messageDiv.style.display = 'block';
+        }
+
+        function hideUploadMessage() {
+            document.getElementById('uploadMessage').style.display = 'none';
         }
 
         function addProduct(name = '', quantity = '', totalVolume = '', costPerUnit = '') {
@@ -579,17 +734,21 @@
                 }
                 
                 row.innerHTML = `
-                    <td><strong>${result.name}</strong></td>
-                    <td>${result.quantity}</td>
-                    <td>${result.total_volume.toFixed(3)}</td>
-                    <td>${result.volume_per_unit.toFixed(4)}</td>
-                    <td>$${result.original_cost_per_unit_usd.toFixed(2)}</td>
-                    <td>$${result.shipping_cost_per_unit_usd.toFixed(2)}</td>
-                    <td>$${result.final_cost_per_unit_usd.toFixed(2)}</td>
-                    <td>$${result.shipping_cost_usd.toFixed(2)}</td>
-                    <td>$${result.import_tax_usd.toFixed(2)}</td>
-                    <td>$${result.total_cost_usd.toFixed(2)}</td>
-                    <td>₪${result.total_cost_ils.toFixed(2)}</td>
+                    <td class="product-name-column"><strong>${result.name}</strong></td>
+                    <td class="quantity-column">${result.quantity}</td>
+                    <td class="volume-column">${result.total_volume.toFixed(3)}</td>
+                    <td class="volume-column">${result.volume_per_unit.toFixed(4)}</td>
+                    <td class="per-unit-column">$${result.original_cost_per_unit_usd.toFixed(2)}</td>
+                    <td class="shipping-column">$${result.shipping_cost_per_unit_usd.toFixed(2)}</td>
+                    <td class="local-column">$${result.local_transportation_per_unit_usd.toFixed(2)}</td>
+                    <td class="unloading-column">$${result.unloading_per_unit_usd.toFixed(2)}</td>
+                    <td class="shipping-column">$${result.shipping_cost_usd.toFixed(2)}</td>
+                    <td class="tax-column">$${result.import_tax_usd.toFixed(2)}</td>
+                    <td class="local-column">$${result.local_transportation_usd.toFixed(2)}</td>
+                    <td class="unloading-column">$${result.unloading_cost_usd.toFixed(2)}</td>
+                    <td class="cost-column usd">$${result.total_cost_usd.toFixed(2)}</td>
+                    <td class="cost-column ils">₪${result.total_cost_ils.toFixed(2)}</td>
+                    <td class="final-cost-column">$${result.final_cost_per_unit_usd.toFixed(2)}</td>
                 `;
                 tbody.appendChild(row);
             });
@@ -601,4 +760,4 @@
         addProduct();
     </script>
 </body>
-</html> 
+</html>
