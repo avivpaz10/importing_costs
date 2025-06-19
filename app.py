@@ -4,6 +4,7 @@ from datetime import datetime
 import os
 import re
 from werkzeug.utils import secure_filename
+import requests
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', os.urandom(24))
@@ -1077,6 +1078,130 @@ def calculate():
         return jsonify({'error': str(e)}), 400
     except Exception as e:
         return jsonify({'error': f'אירעה שגיאה: {str(e)}'}), 500
+
+@app.route('/get-exchange-rate', methods=['GET'])
+def get_exchange_rate():
+    """Fetch the latest USD/ILS exchange rate from a reliable API."""
+    try:
+        # Try multiple APIs for reliability
+        apis = [
+            {
+                'url': 'https://api.exchangerate-api.com/v4/latest/USD',
+                'extract': lambda data: data['rates']['ILS']
+            },
+            {
+                'url': 'https://open.er-api.com/v6/latest/USD',
+                'extract': lambda data: data['rates']['ILS']
+            },
+            {
+                'url': 'https://api.frankfurter.app/latest?from=USD&to=ILS',
+                'extract': lambda data: data['rates']['ILS']
+            }
+        ]
+        
+        for api in apis:
+            try:
+                response = requests.get(api['url'], timeout=5)
+                if response.status_code == 200:
+                    data = response.json()
+                    rate = api['extract'](data)
+                    return jsonify({
+                        'success': True,
+                        'rate': round(rate, 4),
+                        'timestamp': datetime.now().isoformat(),
+                        'source': api['url']
+                    })
+            except Exception as e:
+                print(f"API {api['url']} failed: {str(e)}")
+                continue
+        
+        # If all APIs fail, return a fallback rate (you can update this manually)
+        fallback_rate = 3.65  # Approximate current rate
+        return jsonify({
+            'success': False,
+            'rate': fallback_rate,
+            'message': 'לא ניתן לקבל שער עדכני, מוצג שער ברירת מחדל',
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'שגיאה בקבלת שער חליפין: {str(e)}',
+            'rate': 3.65  # Fallback rate
+        }), 500
+
+@app.route('/get-currency-rates', methods=['GET'])
+def get_currency_rates():
+    """Fetch multiple currency exchange rates for the converter."""
+    try:
+        # Try to get rates from a comprehensive API
+        apis = [
+            {
+                'url': 'https://api.exchangerate-api.com/v4/latest/USD',
+                'extract': lambda data: {
+                    'USD_ILS': data['rates']['ILS'],
+                    'USD_CNY': data['rates']['CNY']
+                }
+            },
+            {
+                'url': 'https://open.er-api.com/v6/latest/USD',
+                'extract': lambda data: {
+                    'USD_ILS': data['rates']['ILS'],
+                    'USD_CNY': data['rates']['CNY']
+                }
+            }
+        ]
+        
+        for api in apis:
+            try:
+                response = requests.get(api['url'], timeout=5)
+                if response.status_code == 200:
+                    data = response.json()
+                    rates = api['extract'](data)
+                    
+                    # Calculate CNY/ILS rate (USD/ILS / USD/CNY)
+                    cny_ils_rate = rates['USD_ILS'] / rates['USD_CNY']
+                    cny_usd_rate = 1 / rates['USD_CNY']  # Convert USD/CNY to CNY/USD
+                    
+                    return jsonify({
+                        'success': True,
+                        'rates': {
+                            'USD_ILS': round(rates['USD_ILS'], 4),
+                            'CNY_USD': round(cny_usd_rate, 4),
+                            'CNY_ILS': round(cny_ils_rate, 4)
+                        },
+                        'timestamp': datetime.now().isoformat(),
+                        'source': api['url']
+                    })
+            except Exception as e:
+                print(f"API {api['url']} failed: {str(e)}")
+                continue
+        
+        # Fallback rates if all APIs fail
+        fallback_rates = {
+            'USD_ILS': 3.65,
+            'CNY_USD': 0.14,
+            'CNY_ILS': 0.51
+        }
+        
+        return jsonify({
+            'success': False,
+            'rates': fallback_rates,
+            'message': 'לא ניתן לקבל שערים עדכניים, מוצגים שערי ברירת מחדל',
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': f'שגיאה בקבלת שערי חליפין: {str(e)}',
+            'rates': {
+                'USD_ILS': 3.65,
+                'CNY_USD': 0.14,
+                'CNY_ILS': 0.51
+            }
+        }), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
