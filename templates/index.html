@@ -127,7 +127,7 @@
             background: linear-gradient(135deg, #007bff, #0056b3);
             color: white;
             border: none;
-            padding: 15px;
+            padding: 8px 12px;
             font-weight: 600;
             text-align: center;
             vertical-align: middle;
@@ -139,7 +139,7 @@
         }
         
         .table td {
-            padding: 12px 15px;
+            padding: 6px 12px;
             vertical-align: middle;
             text-align: center;
             border-bottom: 1px solid #e9ecef;
@@ -157,6 +157,51 @@
         .table td:nth-child(n+3) {
             text-align: center;
             font-family: 'Courier New', monospace;
+        }
+        
+        /* Column width adjustments */
+        .table th:nth-child(1), .table td:nth-child(1) {
+            width: 18%; /* Product name - reduced */
+        }
+        
+        .table th:nth-child(2), .table td:nth-child(2) {
+            width: 5%; /* Quantity - very narrow */
+        }
+        
+        .table th:nth-child(3), .table td:nth-child(3) {
+            width: 7%; /* Volume - narrow */
+        }
+        
+        .table th:nth-child(4), .table td:nth-child(4) {
+            width: 8%; /* Original cost - narrow */
+        }
+        
+        .table th:nth-child(5), .table td:nth-child(5) {
+            width: 7%; /* Shipping cost - narrow */
+        }
+        
+        .table th:nth-child(6), .table td:nth-child(6) {
+            width: 7%; /* Local transport - narrow */
+        }
+        
+        .table th:nth-child(7), .table td:nth-child(7) {
+            width: 5%; /* Unloading - very narrow */
+        }
+        
+        .table th:nth-child(8), .table td:nth-child(8) {
+            width: 7%; /* Additional fees - narrow */
+        }
+        
+        .table th:nth-child(9), .table td:nth-child(9) {
+            width: 8%; /* Final cost ILS - medium */
+        }
+        
+        .table th:nth-child(10), .table td:nth-child(10) {
+            width: 6%; /* VAT ILS - narrow */
+        }
+        
+        .table th:nth-child(11), .table td:nth-child(11) {
+            width: 8%; /* Final cost with VAT ILS - medium */
         }
         
         .table tbody tr:nth-child(even) {
@@ -266,9 +311,28 @@
             font-weight: 600;
         }
         
+        .additional-fees-column {
+            background: linear-gradient(135deg, #fff3e0, #ffcc02);
+            color: #e65100;
+            font-weight: 600;
+        }
+        
         .final-cost-column {
             background: linear-gradient(135deg, #ffebee, #ffcdd2);
             color: #c62828;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .vat-column {
+            background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+            color: #2e7d32;
+            font-weight: 600;
+        }
+        
+        .final-cost-with-vat-column {
+            background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+            color: #6a1b9a;
             font-weight: bold;
             font-size: 1.1em;
         }
@@ -361,6 +425,51 @@
                 border-radius: 15px 15px 0 0;
             }
         }
+        
+        .date-info {
+            background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+            color: #0c5460;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            border-left: 4px solid #17a2b8;
+        }
+        
+        /* Processing Method Selection Styling */
+        .form-check {
+            background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+            border: 2px solid #dee2e6;
+            border-radius: 10px;
+            padding: 15px;
+            margin: 5px 0;
+            transition: all 0.3s ease;
+        }
+        
+        .form-check:hover {
+            background: linear-gradient(135deg, #e9ecef, #dee2e6);
+            border-color: #007bff;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        
+        .form-check-input:checked + .form-check-label {
+            color: #007bff;
+            font-weight: 600;
+        }
+        
+        .form-check-input:checked ~ .form-check {
+            background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+            border-color: #17a2b8;
+        }
+        
+        .form-check-label {
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        .form-check-label i {
+            margin-right: 8px;
+        }
     </style>
 </head>
 <body>
@@ -386,6 +495,7 @@
                 <!-- Excel Upload Section -->
                 <div class="form-section">
                     <h3><i class="fas fa-file-excel"></i> העלאת קובץ אקסל</h3>
+                    
                     <div class="file-upload-area" id="fileUploadArea">
                         <i class="fas fa-cloud-upload-alt fa-3x text-primary mb-3"></i>
                         <h5>גרור ושחרר קובץ אקסל כאן</h5>
@@ -403,57 +513,82 @@
 
                 <!-- Container Settings Section -->
                 <div class="form-section">
-                    <h3><i class="fas fa-cog"></i> הגדרות מיכל</h3>
-                    <div class="row">
-                        <div class="col-md-6 mb-3">
-                            <label for="containerCost" class="form-label">עלות מיכל (דולר)</label>
-                            <div class="input-group">
-                                <span class="input-group-text">$</span>
-                                <input type="number" class="form-control" id="containerCost" step="0.01" required>
+                    <h3><i class="fas fa-cog"></i> הגדרות מכולה</h3>
+                    
+                    <!-- Container Basic Info -->
+                    <div class="row mb-3">
+                        <div class="col-md-2">
+                            <label for="containerCost" class="form-label text-primary fw-bold">עלות מכולה (דולר)</label>
+                            <div class="input-group" style="border: 2px solid #007bff; border-radius: 10px; overflow: hidden;">
+                                <span class="input-group-text" style="background: linear-gradient(135deg, #007bff, #0056b3); color: white; border: none;">$</span>
+                                <input type="number" class="form-control" id="containerCost" step="0.01" required style="border: none;">
                             </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="containerVolume" class="form-label">נפח מיכל (מטר מעוקב)</label>
-                            <div class="input-group">
-                                <input type="number" class="form-control" id="containerVolume" step="0.01" required>
-                                <span class="input-group-text">מ"ק</span>
+                        <div class="col-md-2">
+                            <label for="containerVolume" class="form-label text-success fw-bold">נפח מכולה (מ"ק)</label>
+                            <div class="input-group" style="border: 2px solid #28a745; border-radius: 10px; overflow: hidden;">
+                                <input type="number" class="form-control" id="containerVolume" step="0.01" required style="border: none;">
+                                <span class="input-group-text" style="background: linear-gradient(135deg, #28a745, #1e7e34); color: white; border: none;">מ"ק</span>
                             </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="importTaxRate" class="form-label">מע״מ</label>
-                            <div class="input-group">
-                                <input type="number" class="form-control" id="importTaxRate" step="0.01" required>
-                                <span class="input-group-text">%</span>
-                            </div>
-                        </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="usdToIlsRate" class="form-label">שער דולר לשקל</label>
-                            <div class="input-group">
-                                <span class="input-group-text">₪</span>
-                                <input type="number" class="form-control" id="usdToIlsRate" step="0.01" required>
-                                <button type="button" class="btn btn-outline-primary" onclick="fetchExchangeRate()" id="fetchRateBtn">
+                        <div class="col-md-2">
+                            <label for="usdToIlsRate" class="form-label text-info fw-bold">שער דולר</label>
+                            <div class="input-group" style="border: 2px solid #17a2b8; border-radius: 10px; overflow: hidden;">
+                                <span class="input-group-text" style="background: linear-gradient(135deg, #17a2b8, #138496); color: white; border: none;">₪</span>
+                                <input type="number" class="form-control" id="usdToIlsRate" step="0.01" required style="border: none;">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="fetchExchangeRate()" id="fetchRateBtn" style="border: none; background: linear-gradient(135deg, #17a2b8, #138496); color: white;">
                                     <i class="fas fa-sync-alt"></i>
                                 </button>
                             </div>
                             <small class="text-muted" id="rateInfo"></small>
-                            <div class="mt-2">
-                                <button type="button" class="btn btn-outline-secondary btn-sm" onclick="openCurrencyConverter()">
-                                    <i class="fas fa-exchange-alt me-1"></i>המרת מטבעות
+                        </div>
+                        <div class="col-md-2">
+                            <label for="rmbToIlsRate" class="form-label text-info fw-bold">שער יואן (RMB)</label>
+                            <div class="input-group" style="border: 2px solid #17a2b8; border-radius: 10px; overflow: hidden;">
+                                <span class="input-group-text" style="background: linear-gradient(135deg, #17a2b8, #138496); color: white; border: none;">₪</span>
+                                <input type="number" class="form-control" id="rmbToIlsRate" step="0.01" required style="border: none;">
+                                <button type="button" class="btn btn-outline-primary btn-sm" onclick="fetchRmbRate()" id="fetchRmbRateBtn" style="border: none; background: linear-gradient(135deg, #17a2b8, #138496); color: white;">
+                                    <i class="fas fa-sync-alt"></i>
                                 </button>
                             </div>
+                            <small class="text-muted" id="rmbRateInfo"></small>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="localTransportation" class="form-label">הובלה מקומית (שקל)</label>
-                            <div class="input-group">
-                                <span class="input-group-text">₪</span>
-                                <input type="number" class="form-control" id="localTransportation" step="0.01" value="0">
+                        <div class="col-md-1">
+                            <label class="form-label text-secondary fw-bold">המרת מטבעות</label>
+                            <button type="button" class="btn btn-outline-secondary btn-sm w-100" onclick="openCurrencyConverter()" style="background: linear-gradient(135deg, #6c757d, #545b62); color: white; border: none; border-radius: 10px;">
+                                <i class="fas fa-exchange-alt me-1"></i>המרת מטבעות
+                            </button>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="localTransportation" class="form-label text-danger fw-bold">הובלה מקומית</label>
+                            <div class="input-group" style="border: 2px solid #dc3545; border-radius: 10px; overflow: hidden;">
+                                <span class="input-group-text" style="background: linear-gradient(135deg, #dc3545, #c82333); color: white; border: none;">₪</span>
+                                <input type="number" class="form-control" id="localTransportation" step="0.01" value="0" style="border: none;">
                             </div>
                         </div>
-                        <div class="col-md-6 mb-3">
-                            <label for="unloadingCost" class="form-label">עלות פריקה (שקל)</label>
-                            <div class="input-group">
-                                <span class="input-group-text">₪</span>
-                                <input type="number" class="form-control" id="unloadingCost" step="0.01" value="0">
+                        <div class="col-md-2">
+                            <label for="unloadingCost" class="form-label text-purple fw-bold">עלות פריקה</label>
+                            <div class="input-group" style="border: 2px solid #6f42c1; border-radius: 10px; overflow: hidden;">
+                                <span class="input-group-text" style="background: linear-gradient(135deg, #6f42c1, #5a2d91); color: white; border: none;">₪</span>
+                                <input type="number" class="form-control" id="unloadingCost" step="0.01" value="0" style="border: none;">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Fees Row -->
+                    <div class="row">
+                        <div class="col-md-2">
+                            <label for="additionalFees" class="form-label text-orange fw-bold">עמלות ייבוא נוספות</label>
+                            <div class="input-group" style="border: 2px solid #fd7e14; border-radius: 10px; overflow: hidden;">
+                                <span class="input-group-text" style="background: linear-gradient(135deg, #fd7e14, #e55a00); color: white; border: none;">₪</span>
+                                <input type="number" class="form-control" id="additionalFees" step="0.01" value="0" style="border: none;">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="importTaxRate" class="form-label text-warning fw-bold">מע״מ</label>
+                            <div class="input-group" style="border: 2px solid #ffc107; border-radius: 10px; overflow: hidden;">
+                                <input type="number" class="form-control" id="importTaxRate" step="0.01" required style="border: none;">
+                                <span class="input-group-text" style="background: linear-gradient(135deg, #ffc107, #e0a800); color: #212529; border: none;">%</span>
                             </div>
                         </div>
                     </div>
@@ -487,12 +622,14 @@
                                     <th>מוצר</th>
                                     <th>כמות</th>
                                     <th>נפח כולל (מ"ק)</th>
-                                    <th>עלות מקורית ליחידה (דולר)</th>
-                                    <th>עלות משלוח ליחידה (דולר)</th>
-                                    <th>הובלה מקומית ליחידה (דולר)</th>
-                                    <th>פריקה ליחידה (דולר)</th>
-                                    <th>מע״מ ליחידה (דולר)</th>
-                                    <th>עלות סופית ליחידה (דולר)</th>
+                                    <th>עלות מקורית ליחידה</th>
+                                    <th>עלות משלוח ליחידה</th>
+                                    <th>הובלה מקומית ליחידה</th>
+                                    <th>פריקה ליחידה</th>
+                                    <th>עמלות נוספות ליחידה</th>
+                                    <th>עלות סופית ליחידה</th>
+                                    <th>מע״מ ליחידה</th>
+                                    <th>עלות סופית עם מע״מ ליחידה</th>
                                 </tr>
                             </thead>
                             <tbody id="resultsTableBody">
@@ -710,11 +847,14 @@
             const formData = new FormData();
             formData.append('file', file);
 
+            // Always use robust method
+            const endpoint = '/upload-robust';
+
             document.getElementById('loading').style.display = 'block';
             fileUploadArea.style.display = 'none';
             hideUploadMessage();
 
-            fetch('/upload', {
+            fetch(endpoint, {
                 method: 'POST',
                 body: formData
             })
@@ -730,9 +870,13 @@
                     document.getElementById('productsContainer').innerHTML = '';
                     productCount = 0;
                     
-                    // Add products from Excel
+                    // Add products from Excel - robust method returns products with different field names
                     data.products.forEach(product => {
-                        addProduct(product.name, product.quantity, product.total_volume, product.cost_per_unit_usd);
+                        const name = product.item || product.name || 'מוצר לא ידוע';
+                        const quantity = product.quantity || 0;
+                        const volume = product.cbm || product.total_volume || 0;
+                        const price = product.price || product.cost_per_unit_usd || 0;
+                        addProduct(name, quantity, volume, price);
                     });
                     
                     showUploadMessage(data.message, 'success');
@@ -762,6 +906,12 @@
                 return;
             }
 
+            // Always format totalVolume to 3 decimals
+            let formattedVolume = '';
+            if (totalVolume !== '' && !isNaN(totalVolume)) {
+                formattedVolume = Number(totalVolume).toFixed(3);
+            }
+
             const container = document.getElementById('productsContainer');
             const productDiv = document.createElement('div');
             productDiv.className = 'product-row';
@@ -781,11 +931,11 @@
                     </div>
                     <div class="col-md-2 mb-3">
                         <label class="form-label">נפח כולל (מ"ק)</label>
-                        <input type="number" class="form-control product-volume" value="${totalVolume}" step="0.01" required>
+                        <input type="number" class="form-control product-volume" value="${formattedVolume}" step="0.001" required>
                     </div>
                     <div class="col-md-2 mb-3">
                         <label class="form-label">נפח ליחידה (מ"ק)</label>
-                        <input type="number" class="form-control product-volume-per-unit" step="0.01" readonly>
+                        <input type="number" class="form-control product-volume-per-unit" step="0.001" readonly>
                     </div>
                     <div class="col-md-1 mb-3 d-flex align-items-end">
                         <button type="button" class="btn btn-danger" onclick="removeProduct(this)">
@@ -832,11 +982,11 @@
                 const totalVolume = row.querySelector('.product-volume').value;
                 const costPerUnit = row.querySelector('.product-cost').value;
                 
-                if (name && quantity && totalVolume && costPerUnit) {
+                if (name && quantity && totalVolume !== '' && costPerUnit) {
                     products.push({
                         name: name,
                         quantity: parseInt(quantity),
-                        total_volume: parseFloat(totalVolume),
+                        total_volume: parseFloat(totalVolume) || 0,
                         cost_per_unit_usd: parseFloat(costPerUnit)
                     });
                 }
@@ -852,8 +1002,10 @@
                 container_volume: parseFloat(document.getElementById('containerVolume').value),
                 import_tax_rate: parseFloat(document.getElementById('importTaxRate').value) / 100,
                 usd_to_ils_rate: parseFloat(document.getElementById('usdToIlsRate').value),
+                rmb_to_ils_rate: parseFloat(document.getElementById('rmbToIlsRate').value),
                 local_transportation_ils: parseFloat(document.getElementById('localTransportation').value || 0),
                 unloading_cost_ils: parseFloat(document.getElementById('unloadingCost').value || 0),
+                additional_fees_ils: parseFloat(document.getElementById('additionalFees').value || 0),
                 products: products
             };
 
@@ -881,6 +1033,15 @@
             const tbody = document.getElementById('resultsTableBody');
             tbody.innerHTML = '';
 
+            // Use backend total CBM for display
+            let backendTotalCBM = 0;
+            results.forEach(row => {
+                if (!row.is_total) {
+                    backendTotalCBM += row.total_volume || 0;
+                }
+            });
+            updateTotalCBMDisplay(backendTotalCBM);
+
             // Calculate totals for the summary row
             let totalQuantity = 0;
             let totalVolume = 0;
@@ -888,8 +1049,10 @@
             let totalShippingCost = 0;
             let totalLocalTransport = 0;
             let totalUnloading = 0;
-            let totalImportTax = 0;
-            let totalFinalCost = 0;
+            let totalAdditionalFees = 0;
+            let totalFinalCostILS = 0;
+            let totalVatILS = 0;
+            let totalFinalCostWithVatILS = 0;
 
             results.forEach(result => {
                 if (!result.is_total) { // Skip the existing totals row from backend
@@ -899,24 +1062,28 @@
                         <td class="product-name-column"><strong>${result.name}</strong></td>
                         <td class="quantity-column">${result.quantity}</td>
                         <td class="volume-column">${result.total_volume.toFixed(3)}</td>
-                        <td class="per-unit-column">$${result.original_cost_per_unit_usd.toFixed(2)}</td>
-                        <td class="shipping-column">$${result.shipping_cost_per_unit_usd.toFixed(2)}</td>
-                        <td class="local-column">$${result.local_transportation_per_unit_usd.toFixed(2)}</td>
-                        <td class="unloading-column">$${result.unloading_per_unit_usd.toFixed(2)}</td>
-                        <td class="tax-column">$${(result.import_tax_usd / result.quantity).toFixed(2)}</td>
-                        <td class="final-cost-column">$${result.final_cost_per_unit_usd.toFixed(2)}</td>
+                        <td class="per-unit-column">₪${result.original_cost_per_unit_ils.toFixed(2)}</td>
+                        <td class="shipping-column">₪${result.shipping_cost_per_unit_ils.toFixed(2)}</td>
+                        <td class="local-column">₪${result.local_transportation_per_unit_ils.toFixed(2)}</td>
+                        <td class="unloading-column">₪${result.unloading_per_unit_ils.toFixed(2)}</td>
+                        <td class="additional-fees-column">₪${result.additional_fees_per_unit_ils.toFixed(2)}</td>
+                        <td class="final-cost-column">₪${result.final_cost_per_unit_ils.toFixed(2)}</td>
+                        <td class="vat-column">₪${result.vat_per_unit_ils.toFixed(2)}</td>
+                        <td class="final-cost-with-vat-column">₪${result.final_cost_per_unit_with_vat_ils.toFixed(2)}</td>
                     `;
                     tbody.appendChild(row);
 
-                    // Accumulate totals using the total values from backend (not multiplying per-unit)
+                    // Accumulate totals
                     totalQuantity += result.quantity;
                     totalVolume += result.total_volume;
-                    totalOriginalCost += result.original_cost_per_unit_usd * result.quantity;
-                    totalShippingCost += result.shipping_cost_usd; // Use total shipping cost, not per-unit * quantity
-                    totalLocalTransport += result.local_transportation_usd; // Use total local transport, not per-unit * quantity
-                    totalUnloading += result.unloading_cost_usd; // Use total unloading cost, not per-unit * quantity
-                    totalImportTax += result.import_tax_usd; // Use total import tax
-                    totalFinalCost += result.final_cost_per_unit_usd * result.quantity;
+                    totalOriginalCost += result.original_cost_per_unit_ils * result.quantity;
+                    totalShippingCost += result.shipping_cost_ils;
+                    totalLocalTransport += result.local_transportation_ils;
+                    totalUnloading += result.unloading_cost_ils;
+                    totalAdditionalFees += result.additional_fees_ils;
+                    totalFinalCostILS += result.final_cost_per_unit_ils * result.quantity;
+                    totalVatILS += result.vat_per_unit_ils * result.quantity;
+                    totalFinalCostWithVatILS += result.final_cost_per_unit_with_vat_ils * result.quantity;
                 }
             });
 
@@ -928,17 +1095,37 @@
                 <td class="product-name-column"><strong>סה"כ</strong></td>
                 <td class="quantity-column"><strong>${totalQuantity}</strong></td>
                 <td class="volume-column"><strong>${totalVolume.toFixed(3)}</strong></td>
-                <td class="per-unit-column"><strong>$${totalOriginalCost.toFixed(2)}</strong></td>
-                <td class="shipping-column"><strong>$${totalShippingCost.toFixed(2)}</strong></td>
-                <td class="local-column"><strong>$${totalLocalTransport.toFixed(2)}</strong></td>
-                <td class="unloading-column"><strong>$${totalUnloading.toFixed(2)}</strong></td>
-                <td class="tax-column"><strong>$${totalImportTax.toFixed(2)}</strong></td>
-                <td class="final-cost-column"><strong>$${totalFinalCost.toFixed(2)}</strong></td>
+                <td class="per-unit-column"><strong>₪${totalOriginalCost.toFixed(2)}</strong></td>
+                <td class="shipping-column"><strong>₪${totalShippingCost.toFixed(2)}</strong></td>
+                <td class="local-column"><strong>₪${totalLocalTransport.toFixed(2)}</strong></td>
+                <td class="unloading-column"><strong>₪${totalUnloading.toFixed(2)}</strong></td>
+                <td class="additional-fees-column"><strong>₪${totalAdditionalFees.toFixed(2)}</strong></td>
+                <td class="final-cost-column"><strong>₪${totalFinalCostILS.toFixed(2)}</strong></td>
+                <td class="vat-column"><strong>₪${totalVatILS.toFixed(2)}</strong></td>
+                <td class="final-cost-with-vat-column"><strong>₪${totalFinalCostWithVatILS.toFixed(2)}</strong></td>
             `;
             tbody.appendChild(totalsRow);
 
             document.getElementById('resultsSection').style.display = 'block';
         }
+
+        function updateTotalCBMDisplay(totalCBM) {
+            const cbmElem = document.getElementById('totalCBM');
+            if (cbmElem) {
+                cbmElem.textContent = Number(totalCBM).toFixed(3);
+            }
+        }
+
+        // If user edits CBM fields, recalculate total CBM in frontend and update display
+        function recalculateTotalCBMFromInputs() {
+            let totalCBM = 0;
+            document.querySelectorAll('.product-volume').forEach(input => {
+                totalCBM += parseFloat(input.value) || 0;
+            });
+            updateTotalCBMDisplay(totalCBM);
+        }
+        // Add event listeners to .product-volume inputs after adding products
+        // (You may need to call recalculateTotalCBMFromInputs() on input change)
 
         function shareResults() {
             const allData = collectAllData();
@@ -1003,6 +1190,7 @@
             const usdToIlsRate = document.getElementById('usdToIlsRate').value;
             const localTransportation = document.getElementById('localTransportation').value || 0;
             const unloadingCost = document.getElementById('unloadingCost').value || 0;
+            const additionalFees = document.getElementById('additionalFees').value || 0;
 
             // Collect results table
             const resultsTable = document.querySelector('.results-table');
@@ -1015,7 +1203,8 @@
                     importTaxRate,
                     usdToIlsRate,
                     localTransportation,
-                    unloadingCost
+                    unloadingCost,
+                    additionalFees
                 },
                 resultsTable: tableHTML,
                 date: new Date().toLocaleDateString('he-IL'),
@@ -1028,13 +1217,14 @@
             text += `תאריך: ${data.date}\n`;
             text += `שעה: ${data.time}\n\n`;
             
-            text += `הגדרות מיכל:\n`;
-            text += `עלות מיכל: $${data.containerSettings.containerCost}\n`;
-            text += `נפח מיכל: ${data.containerSettings.containerVolume} מ"ק\n`;
+            text += `הגדרות מכולה:\n`;
+            text += `עלות מכולה: $${data.containerSettings.containerCost}\n`;
+            text += `נפח מכולה: ${data.containerSettings.containerVolume} מ"ק\n`;
             text += `מע"מ: ${data.containerSettings.importTaxRate}%\n`;
             text += `שער דולר: ₪${data.containerSettings.usdToIlsRate}\n`;
             text += `הובלה מקומית: ₪${data.containerSettings.localTransportation}\n`;
-            text += `עלות פריקה: ₪${data.containerSettings.unloadingCost}\n\n`;
+            text += `עלות פריקה: ₪${data.containerSettings.unloadingCost}\n`;
+            text += `עמלות ייבוא נוספות: ₪${data.containerSettings.additionalFees}\n\n`;
             
             text += `מוצרים:\n`;
             data.products.forEach((product, index) => {
@@ -1290,15 +1480,28 @@
             font-weight: 600;
         }
         
-        .tax-column {
-            background: linear-gradient(135deg, #ffeaa7, #fdcb6e);
-            color: #856404;
+        .additional-fees-column {
+            background: linear-gradient(135deg, #fff3e0, #ffcc02);
+            color: #e65100;
             font-weight: 600;
         }
         
         .final-cost-column {
             background: linear-gradient(135deg, #ffebee, #ffcdd2);
             color: #c62828;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        
+        .vat-column {
+            background: linear-gradient(135deg, #e8f5e8, #c8e6c9);
+            color: #2e7d32;
+            font-weight: 600;
+        }
+        
+        .final-cost-with-vat-column {
+            background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+            color: #6a1b9a;
             font-weight: bold;
             font-size: 1.1em;
         }
@@ -1353,13 +1556,13 @@
             </div>
             
             <div class="section">
-                <h2>⚙️ הגדרות מיכל</h2>
+                <h2>⚙️ הגדרות מכולה</h2>
                 <div class="settings-grid">
                     <div class="setting-item">
-                        <strong>עלות מיכל:</strong><br>$${data.containerSettings.containerCost}
+                        <strong>עלות מכולה:</strong><br>$${data.containerSettings.containerCost}
                     </div>
                     <div class="setting-item">
-                        <strong>נפח מיכל:</strong><br>${data.containerSettings.containerVolume} מ"ק
+                        <strong>נפח מכולה:</strong><br>${data.containerSettings.containerVolume} מ"ק
                     </div>
                     <div class="setting-item">
                         <strong>מע"מ:</strong><br>${data.containerSettings.importTaxRate}%
@@ -1372,6 +1575,9 @@
                     </div>
                     <div class="setting-item">
                         <strong>עלות פריקה:</strong><br>₪${data.containerSettings.unloadingCost}
+                    </div>
+                    <div class="setting-item">
+                        <strong>עמלות ייבוא נוספות:</strong><br>₪${data.containerSettings.additionalFees}
                     </div>
                 </div>
             </div>
@@ -1389,8 +1595,9 @@
         // Initialize with one empty product
         addProduct();
 
-        // Fetch exchange rate on page load
+        // Fetch exchange rates on page load
         fetchExchangeRate();
+        fetchRmbRate();
 
         // Global variables for currency rates
         let currencyRates = {
@@ -1539,6 +1746,32 @@
                     // Reset button state
                     button.innerHTML = '<i class="fas fa-sync-alt"></i>';
                     button.disabled = false;
+                });
+        }
+
+        function fetchRmbRate() {
+            const btn = document.getElementById('fetchRmbRateBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+            fetch('/get-currency-rates')
+                .then(response => response.json())
+                .then(data => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+                    if (data.success && data.rates && data.rates.CNY_ILS) {
+                        document.getElementById('rmbToIlsRate').value = data.rates.CNY_ILS;
+                        document.getElementById('rmbRateInfo').textContent = `עודכן: ${new Date(data.timestamp).toLocaleString()} (מקור: ${data.source || ''})`;
+                    } else if (data.rates && data.rates.CNY_ILS) {
+                        document.getElementById('rmbToIlsRate').value = data.rates.CNY_ILS;
+                        document.getElementById('rmbRateInfo').textContent = data.message || 'השתמש בשער ברירת מחדל';
+                    } else {
+                        document.getElementById('rmbRateInfo').textContent = 'לא ניתן לקבל שער עדכני';
+                    }
+                })
+                .catch(() => {
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+                    document.getElementById('rmbRateInfo').textContent = 'שגיאה בקבלת שער';
                 });
         }
     </script>

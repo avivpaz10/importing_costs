@@ -845,65 +845,89 @@ class ContainerCalculator:
         self.container_volume = 0
         self.import_tax_rate = 0
         self.usd_to_ils_rate = 0
+        self.rmb_to_ils_rate = 0
         self.local_transportation_ils = 0
         self.unloading_cost_ils = 0
+        self.additional_fees_ils = 0
         self.products = []
 
-    def add_product(self, name, quantity, total_volume, cost_per_unit_usd):
+    def add_product(self, name, quantity, total_volume, cost_per_unit, currency='USD'):
         self.products.append({
             'name': name,
             'quantity': quantity,
             'total_volume': total_volume,
             'volume_per_unit': total_volume / quantity if quantity > 0 else 0,
-            'cost_per_unit_usd': cost_per_unit_usd
+            'cost_per_unit': cost_per_unit,
+            'currency': currency
         })
 
     def calculate_costs(self):
         total_volume = sum(p['total_volume'] for p in self.products)
         if total_volume > self.container_volume:
             raise ValueError("Total product volume exceeds container volume")
+        if total_volume == 0:
+            raise ValueError("Total volume cannot be zero. Please check your product data.")
+        if self.usd_to_ils_rate == 0 and self.rmb_to_ils_rate == 0:
+            raise ValueError("No valid exchange rate provided.")
 
         results = []
         total_shipping_usd = 0
-        total_import_tax_usd = 0
-        total_local_transportation_usd = 0
-        total_unloading_usd = 0
-        total_cost_usd = 0
+        total_import_tax_ils = 0
+        total_local_transportation_ils = 0
+        total_unloading_ils = 0
+        total_additional_fees_ils = 0
         total_cost_ils = 0
 
         for product in self.products:
-            volume_ratio = product['total_volume'] / total_volume
-            
-            # Calculate shipping costs
+            volume_ratio = product['total_volume'] / total_volume if total_volume > 0 else 0
             shipping_cost_usd = self.container_cost_usd * volume_ratio
             shipping_cost_per_unit_usd = shipping_cost_usd / product['quantity'] if product['quantity'] > 0 else 0
+
+            # Determine conversion rate
+            if product['currency'] == 'RMB':
+                conversion_rate = self.rmb_to_ils_rate
+            else:
+                conversion_rate = self.usd_to_ils_rate
+            if conversion_rate == 0:
+                raise ValueError(f"Missing conversion rate for currency {product['currency']}")
+
+            # Convert product cost to ILS
+            original_cost_per_unit_ils = product['cost_per_unit'] * conversion_rate
+            shipping_cost_per_unit_ils = shipping_cost_per_unit_usd * self.usd_to_ils_rate  # Shipping is always in USD
+
+            # Local costs in ILS
+            local_transportation_ils = self.local_transportation_ils * volume_ratio
+            unloading_ils = self.unloading_cost_ils * volume_ratio
+            additional_fees_ils = self.additional_fees_ils * volume_ratio
+
+            local_transportation_per_unit_ils = local_transportation_ils / product['quantity'] if product['quantity'] > 0 else 0
+            unloading_per_unit_ils = unloading_ils / product['quantity'] if product['quantity'] > 0 else 0
+            additional_fees_per_unit_ils = additional_fees_ils / product['quantity'] if product['quantity'] > 0 else 0
+
+            # Final cost per unit in ILS
+            final_cost_per_unit_ils = (original_cost_per_unit_ils +
+                                       shipping_cost_per_unit_ils +
+                                       local_transportation_per_unit_ils +
+                                       unloading_per_unit_ils +
+                                       additional_fees_per_unit_ils)
+            vat_per_unit_ils = final_cost_per_unit_ils * self.import_tax_rate
+            final_cost_per_unit_with_vat_ils = final_cost_per_unit_ils + vat_per_unit_ils
+
+            # Totals for this product
+            total_product_cost_ils = (shipping_cost_usd * self.usd_to_ils_rate +
+                                      local_transportation_ils +
+                                      unloading_ils +
+                                      additional_fees_ils)
             
-            # Calculate import tax
-            import_tax_usd = shipping_cost_usd * self.import_tax_rate
-            
-            # Calculate local transportation and unloading costs (convert from ILS to USD)
-            local_transportation_usd = (self.local_transportation_ils * volume_ratio) / self.usd_to_ils_rate
-            unloading_cost_usd = (self.unloading_cost_ils * volume_ratio) / self.usd_to_ils_rate
-            
-            # Calculate per-unit local costs
-            local_transportation_per_unit_usd = local_transportation_usd / product['quantity'] if product['quantity'] > 0 else 0
-            unloading_per_unit_usd = unloading_cost_usd / product['quantity'] if product['quantity'] > 0 else 0
-            
-            # Total cost includes shipping, import tax, local transportation, and unloading
-            total_product_cost_usd = shipping_cost_usd + import_tax_usd + local_transportation_usd + unloading_cost_usd
-            total_product_cost_ils = total_product_cost_usd * self.usd_to_ils_rate
-            
-            # Calculate final cost per unit (original unit price + all shipping-related costs per unit)
-            final_cost_per_unit_usd = (product['cost_per_unit_usd'] + 
-                                     shipping_cost_per_unit_usd + 
-                                     local_transportation_per_unit_usd + 
-                                     unloading_per_unit_usd)
+            # Add the original product cost converted to ILS
+            total_original_cost_ils = product['cost_per_unit'] * product['quantity'] * conversion_rate
+            total_product_cost_ils += total_original_cost_ils
 
             total_shipping_usd += shipping_cost_usd
-            total_import_tax_usd += import_tax_usd
-            total_local_transportation_usd += local_transportation_usd
-            total_unloading_usd += unloading_cost_usd
-            total_cost_usd += total_product_cost_usd
+            total_import_tax_ils += vat_per_unit_ils * product['quantity']
+            total_local_transportation_ils += local_transportation_ils
+            total_unloading_ils += unloading_ils
+            total_additional_fees_ils += additional_fees_ils
             total_cost_ils += total_product_cost_ils
 
             results.append({
@@ -911,37 +935,44 @@ class ContainerCalculator:
                 'quantity': product['quantity'],
                 'total_volume': product['total_volume'],
                 'volume_per_unit': product['volume_per_unit'],
-                'original_cost_per_unit_usd': round(product['cost_per_unit_usd'], 2),
-                'shipping_cost_per_unit_usd': round(shipping_cost_per_unit_usd, 2),
-                'local_transportation_per_unit_usd': round(local_transportation_per_unit_usd, 2),
-                'unloading_per_unit_usd': round(unloading_per_unit_usd, 2),
-                'final_cost_per_unit_usd': round(final_cost_per_unit_usd, 2),
-                'shipping_cost_usd': round(shipping_cost_usd, 2),
-                'import_tax_usd': round(import_tax_usd, 2),
-                'local_transportation_usd': round(local_transportation_usd, 2),
-                'unloading_cost_usd': round(unloading_cost_usd, 2),
-                'total_cost_usd': round(total_product_cost_usd, 2),
-                'total_cost_ils': round(total_product_cost_ils, 2)
+                'original_cost_per_unit_ils': round(original_cost_per_unit_ils, 2),
+                'shipping_cost_per_unit_ils': round(shipping_cost_per_unit_ils, 2),
+                'local_transportation_per_unit_ils': round(local_transportation_per_unit_ils, 2),
+                'unloading_per_unit_ils': round(unloading_per_unit_ils, 2),
+                'additional_fees_per_unit_ils': round(additional_fees_per_unit_ils, 2),
+                'final_cost_per_unit_ils': round(final_cost_per_unit_ils, 2),
+                'final_cost_per_unit_with_vat_ils': round(final_cost_per_unit_with_vat_ils, 2),
+                'vat_per_unit_ils': round(vat_per_unit_ils, 2),
+                'shipping_cost_ils': round(shipping_cost_usd * self.usd_to_ils_rate, 2),
+                'local_transportation_ils': round(local_transportation_ils, 2),
+                'unloading_cost_ils': round(unloading_ils, 2),
+                'additional_fees_ils': round(additional_fees_ils, 2),
+                'total_cost_ils': round(total_product_cost_ils, 2),
+                'currency': product['currency']
             })
 
         # Add totals row
+        total_quantity = sum(p['quantity'] for p in self.products)
         results.append({
             'name': 'TOTALS',
-            'quantity': sum(p['quantity'] for p in self.products),
+            'quantity': total_quantity,
             'total_volume': total_volume,
-            'volume_per_unit': total_volume / sum(p['quantity'] for p in self.products) if sum(p['quantity'] for p in self.products) > 0 else 0,
-            'original_cost_per_unit_usd': 0,  # No per-unit original cost for total
-            'shipping_cost_per_unit_usd': 0,  # No per-unit shipping cost for total
-            'local_transportation_per_unit_usd': 0,  # No per-unit local transportation cost for total
-            'unloading_per_unit_usd': 0,  # No per-unit unloading cost for total
-            'final_cost_per_unit_usd': 0,  # No per-unit final cost for total
-            'shipping_cost_usd': round(total_shipping_usd, 2),
-            'import_tax_usd': round(total_import_tax_usd, 2),
-            'local_transportation_usd': round(total_local_transportation_usd, 2),
-            'unloading_cost_usd': round(total_unloading_usd, 2),
-            'total_cost_usd': round(total_cost_usd, 2),
+            'volume_per_unit': total_volume / total_quantity if total_quantity > 0 else 0,
+            'original_cost_per_unit_ils': 0,
+            'shipping_cost_per_unit_ils': 0,
+            'local_transportation_per_unit_ils': 0,
+            'unloading_per_unit_ils': 0,
+            'additional_fees_per_unit_ils': 0,
+            'final_cost_per_unit_ils': 0,
+            'final_cost_per_unit_with_vat_ils': 0,
+            'vat_per_unit_ils': 0,
+            'shipping_cost_ils': round(total_shipping_usd * self.usd_to_ils_rate, 2),
+            'local_transportation_ils': round(total_local_transportation_ils, 2),
+            'unloading_cost_ils': round(total_unloading_ils, 2),
+            'additional_fees_ils': round(total_additional_fees_ils, 2),
             'total_cost_ils': round(total_cost_ils, 2),
-            'is_total': True
+            'is_total': True,
+            'currency': ''
         })
 
         return results
@@ -1033,8 +1064,10 @@ def calculate():
         container_volume = float(data['container_volume'])
         import_tax_rate = float(data['import_tax_rate'])
         usd_to_ils_rate = float(data['usd_to_ils_rate'])
+        rmb_to_ils_rate = float(data.get('rmb_to_ils_rate', 0))
         local_transportation = float(data.get('local_transportation_ils', 0))
         unloading_cost = float(data.get('unloading_cost_ils', 0))
+        additional_fees = float(data.get('additional_fees_ils', 0))
         products = data['products']
 
         if not products:
@@ -1046,16 +1079,19 @@ def calculate():
         calculator.container_volume = container_volume
         calculator.import_tax_rate = import_tax_rate
         calculator.usd_to_ils_rate = usd_to_ils_rate
+        calculator.rmb_to_ils_rate = rmb_to_ils_rate
         calculator.local_transportation_ils = local_transportation
         calculator.unloading_cost_ils = unloading_cost
+        calculator.additional_fees_ils = additional_fees
 
         # Add products to calculator
         for product in products:
             calculator.add_product(
-                name=product['name'],
+                name=product.get('name') or product.get('item'),
                 quantity=int(product['quantity']),
                 total_volume=float(product['total_volume']),
-                cost_per_unit_usd=float(product['cost_per_unit_usd'])
+                cost_per_unit= float(product['cost_per_unit_usd']) if 'cost_per_unit_usd' in product else float(product['price']),
+                currency=product.get('currency', 'USD')
             )
 
         # Calculate costs
@@ -1065,10 +1101,11 @@ def calculate():
             'results': results,
             'summary': {
                 'total_volume': f"{sum(p['total_volume'] for p in products):.3f}",
-                'total_cost_usd': f"${sum(p['quantity'] * p['cost_per_unit_usd'] for p in products):.2f}",
+                'total_cost_usd': f"${sum(p['quantity'] * (p.get('cost_per_unit_usd', p.get('price', 0))) for p in products):.2f}",
                 'container_cost': f"${container_cost:.2f}",
                 'local_transportation': f"₪{local_transportation:.2f}",
-                'unloading_cost': f"₪{unloading_cost:.2f}"
+                'unloading_cost': f"₪{unloading_cost:.2f}",
+                'additional_fees': f"₪{additional_fees:.2f}"
             }
         })
 
@@ -1202,6 +1239,222 @@ def get_currency_rates():
                 'CNY_ILS': 0.51
             }
         }), 500
+
+# --- BEGIN: Robust Excel Extraction Logic (from analyze_excel.py) ---
+def find_header_and_columns(df):
+    # Strict quantity keywords
+    strict_quantity_keywords = ['quantity', 'qty', 'pcs', 'pieces', 'units', 'sets/ctn', 'ctn']
+    header_keywords = {
+        'item': ['item', 'code', 'product', 'customer id', 'item no', 'item number', 'product code', 'sku'],
+        'description': ['description', 'desc', 'product description', 'name', 'product name'],
+        'unit_price': ['unit price', 'unite price', 'price per unit', 'unit cost', 'rate', 'unit rate', 'price', 'exw price', 'fob price'],
+        'total_amount': ['amount', 'total', 'total amount', 'total price', 'cost', 'total fob amount'],
+        'cbm': ['cbm', 'volume', 'm3', 'cubic meter', 'cubic meters', 'cubic metre', 'cubic metres', 'vol', 'space', 'size', 'cbm/box', 'total cbm']
+    }
+    header_row_idx = None
+    column_map = {}
+    
+    # Scan first 15 rows for header (increased from 10)
+    for idx in range(min(15, len(df))):
+        row = df.iloc[idx]
+        for col_idx, val in enumerate(row):
+            if pd.isna(val):
+                continue
+            val_str = str(val).strip().lower()
+            # Strict quantity matching
+            if any(val_str == k for k in strict_quantity_keywords) and not any(x in val_str for x in ['price', 'amount']):
+                column_map['quantity'] = col_idx
+                print(f"Strict match: Found quantity column at index {col_idx}: '{val}'")
+            for key, keywords in header_keywords.items():
+                if key == 'quantity':
+                    continue  # Already handled strictly above
+                if any(k in val_str for k in keywords):
+                    column_map[key] = col_idx
+                    print(f"Found {key} column at index {col_idx}: '{val}'")
+        # If we found at least 3 fields, treat this as header
+        if len(column_map) >= 3:
+            header_row_idx = idx
+            print(f"Header row found at index {idx} with {len(column_map)} columns")
+            break
+    
+    # If we didn't find enough columns, try a more aggressive search
+    if header_row_idx is None or len(column_map) < 3:
+        print("Trying more aggressive header search...")
+        for idx in range(min(15, len(df))):
+            row = df.iloc[idx]
+            header_score = 0
+            temp_column_map = {}
+            for col_idx, val in enumerate(row):
+                if pd.isna(val):
+                    continue
+                val_str = str(val).strip().lower()
+                # Strict quantity matching
+                if any(val_str == k for k in strict_quantity_keywords) and not any(x in val_str for x in ['price', 'amount']):
+                    temp_column_map['quantity'] = col_idx
+                # Other fields
+                for key, keywords in header_keywords.items():
+                    if key == 'quantity':
+                        continue
+                    if any(k in val_str for k in keywords):
+                        temp_column_map[key] = col_idx
+                if any(word in val_str for word in ['qty', 'quantity', 'pcs', 'price', 'cost', 'cbm', 'volume', 'amount', 'total']):
+                    header_score += 1
+            if header_score >= 2:  # At least 2 columns look like headers
+                column_map = temp_column_map
+                header_row_idx = idx
+                print(f"Found header row at index {idx} with aggressive search: {column_map}")
+                break
+    
+    # Find price columns (FOB or other price columns)
+    if header_row_idx is not None:
+        header_row = df.iloc[header_row_idx]
+        for col_idx, val in enumerate(header_row):
+            if pd.isna(val):
+                continue
+            val_str = str(val).strip().lower()
+            val_str_alnum = ''.join(c if c.isalnum() else ' ' for c in val_str)
+            
+            # Look for any price column (FOB, EXW, etc.)
+            if 'price' in val_str:
+                price_col = col_idx
+                print(f"Found price column at {col_idx}: '{val}'")
+                break
+            elif 'price' in val_str_alnum:
+                price_col = col_idx
+                print(f"Found price column (alnum match) at {col_idx}: '{val}'")
+                break
+        
+        # Update column_map to use the found price column
+        if 'price_col' in locals() and price_col is not None:
+            column_map['unit_price'] = price_col
+            print(f"Using price column {price_col} for unit_price")
+        else:
+            print("No price column found - will not set unit_price")
+    else:
+        print("No header row found - cannot detect price columns")
+    
+    return header_row_idx, column_map
+
+def extract_products_from_excel(filepath):
+    df = pd.read_excel(filepath, header=None)
+    header_row_idx, column_map = find_header_and_columns(df)
+    if header_row_idx is None:
+        raise ValueError("Could not find a suitable header row.")
+    
+    # Check if we found the essential columns
+    if 'item' not in column_map:
+        # Try to find item column by looking for numeric values in first column
+        print("Item column not found in headers, checking first column for item numbers...")
+        item_candidates = []
+        for idx in range(header_row_idx + 1, min(header_row_idx + 20, len(df))):
+            if pd.notna(df.iloc[idx, 0]):
+                val = str(df.iloc[idx, 0]).strip()
+                # Check if it looks like an item number (numeric or alphanumeric)
+                if val and (val.isdigit() or (len(val) > 1 and any(c.isdigit() for c in val))):
+                    item_candidates.append((idx, val))
+        
+        if item_candidates:
+            column_map['item'] = 0  # Use first column as item column
+            print(f"Found {len(item_candidates)} potential items in first column: {[c[1] for c in item_candidates[:5]]}")
+        else:
+            raise ValueError("Could not find item/product column in the Excel file.")
+    
+    if 'quantity' not in column_map:
+        raise ValueError("Could not find quantity column in the Excel file.")
+    if 'unit_price' not in column_map and 'total_amount' not in column_map:
+        raise ValueError("Could not find price or amount column in the Excel file.")
+    
+    print(f"Found columns: {column_map}")
+    
+    # Determine currency type for price column
+    price_currency = 'USD'
+    if 'unit_price' in column_map:
+        header_row = df.iloc[header_row_idx]
+        price_header = str(header_row[column_map['unit_price']]).strip()
+        # Check if header contains 'RMB' or 'rmb' (case-insensitive)
+        if 'rmb' in price_header.lower():
+            price_currency = 'RMB'
+            print(f"Detected RMB currency from header: '{price_header}'")
+        elif 'usd' in price_header.lower() or '$' in price_header:
+            price_currency = 'USD'
+            print(f"Detected USD currency from header: '{price_header}'")
+        else:
+            print(f"No specific currency detected in header: '{price_header}', defaulting to USD")
+    
+    products = []
+    for idx in range(header_row_idx + 1, len(df)):
+        row = df.iloc[idx]
+        item_val = row[column_map['item']] if 'item' in column_map else None
+        if pd.isna(item_val) or (isinstance(item_val, str) and 'total' in item_val.lower()):
+            break
+        
+        # Extract values with better error handling
+        try:
+            quantity = float(row[column_map['quantity']]) if 'quantity' in column_map and pd.notna(row[column_map['quantity']]) else 0
+            cbm = float(row[column_map['cbm']]) if 'cbm' in column_map and pd.notna(row[column_map['cbm']]) else 0
+            description = str(row[column_map['description']]).strip() if 'description' in column_map and pd.notna(row[column_map['description']]) else ''
+            
+            # Handle price/amount extraction
+            unit_price = 0
+            if 'unit_price' in column_map and pd.notna(row[column_map['unit_price']]):
+                unit_price = float(row[column_map['unit_price']])
+                print(f"Found unit price: {unit_price}")
+            elif 'total_amount' in column_map and pd.notna(row[column_map['total_amount']]):
+                total_amount = float(row[column_map['total_amount']])
+                if quantity > 0:
+                    unit_price = total_amount / quantity
+                    print(f"Found total amount: {total_amount}, calculated unit price: {unit_price:.2f}")
+                else:
+                    unit_price = total_amount  # If no quantity, treat as unit price
+                    print(f"No quantity found, treating amount as unit price: {unit_price}")
+            
+            product = {
+                'item': str(item_val).strip() if item_val is not None else '',
+                'description': description,
+                'price': unit_price,
+                'quantity': quantity,
+                'cbm': cbm,
+                'currency': price_currency
+            }
+            
+            # Only add product if it has valid data
+            if product['item'] and (quantity > 0 or unit_price > 0):
+                products.append(product)
+                print(f"Added product: {product['item']} - Qty: {quantity}, Unit Price: {unit_price:.2f}, CBM: {cbm}, Currency: {price_currency}")
+            
+        except (ValueError, TypeError) as e:
+            print(f"Error processing row {idx}: {e}")
+            continue
+    
+    print(f"Total products extracted: {len(products)}")
+    return products
+# --- END: Robust Excel Extraction Logic ---
+
+@app.route('/upload-robust', methods=['POST'])
+def upload_file_robust():
+    if 'file' not in request.files:
+        return jsonify({'error': 'לא נבחר קובץ'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        return jsonify({'error': 'לא נבחר קובץ'}), 400
+    if not file.filename.endswith(('.xls', '.xlsx')):
+        return jsonify({'error': 'הקובץ חייב להיות בפורמט אקסל (.xls או .xlsx)'}), 400
+    try:
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        file.save(filepath)
+        try:
+            products = extract_products_from_excel(filepath)
+            message = f"הקובץ עובד בהצלחה! נמצאו {len(products)} מוצרים. (שיטה רובסטית)"
+            response = {'message': message, 'products': products, 'total_products': len(products)}
+        except Exception as e:
+            response = {'error': f'שגיאה בעיבוד הקובץ: {str(e)}'}
+        os.remove(filepath)
+        return jsonify(response)
+    except Exception as e:
+        if 'filepath' in locals() and os.path.exists(filepath):
+            os.remove(filepath)
+        return jsonify({'error': f'שגיאה בעיבוד הקובץ: {str(e)}'}), 500
 
 if __name__ == '__main__':
     port = int(os.environ.get('PORT', 5000))
