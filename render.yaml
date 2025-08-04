@@ -8,4 +8,10 @@ services:
       - key: PYTHON_VERSION
         value: 3.9.16
       - key: SECRET_KEY
-        generateValue: true 
+        generateValue: true
+    buildFilter:
+      paths:
+        - requirements.txt
+        - app.py
+        - templates/**
+        - static/** 
