@@ -2,11 +2,11 @@ services:
   - type: web
     name: importing-costs
     env: python
-    buildCommand: pip install -r requirements.txt
+    buildCommand: pip install --no-cache-dir -r requirements.txt
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
-        value: 3.9.16
+        value: 3.8.16
       - key: SECRET_KEY
         generateValue: true
     buildFilter:
