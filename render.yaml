@@ -6,7 +6,7 @@ services:
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: PYTHON_VERSION
-        value: 3.8.10
+        value: 3.9.7
       - key: SECRET_KEY
         generateValue: true
     buildFilter:
