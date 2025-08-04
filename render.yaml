@@ -3,7 +3,7 @@ services:
     name: importing-project
     env: python
     plan: free
-    buildCommand: chmod +x build.sh && ./build.sh
+    buildCommand: chmod +x build_render.sh && ./build_render.sh
     startCommand: gunicorn app:app
     envVars:
       - key: PYTHON_VERSION
