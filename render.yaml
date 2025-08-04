@@ -2,13 +2,15 @@ services:
   - type: web
     name: importing-costs
     env: python
-    buildCommand: pip install --no-cache-dir --only-binary=all -r requirements.txt
+    buildCommand: pip install --no-cache-dir --only-binary=all --platform manylinux2014_x86_64 -r requirements.txt
     startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
     envVars:
       - key: SECRET_KEY
         generateValue: true
       - key: PIP_ONLY_BINARY
         value: "pandas"
+      - key: PIP_PLATFORM
+        value: "manylinux2014_x86_64"
     buildFilter:
       paths:
         - requirements.txt
